@@ -4,11 +4,12 @@ module.exports = {
     node: true,
     es6: true,
   },
+  parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 8,
     sourceType: 'module',
   },
-  ignorePatterns: ['node_modules/*', 'i18n*.tsx'],
+  ignorePatterns: ['node_modules/*'],
   extends: [
     'eslint:recommended',
     'next/core-web-vitals',
