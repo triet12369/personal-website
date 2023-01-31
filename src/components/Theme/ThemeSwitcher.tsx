@@ -17,7 +17,7 @@ export const ThemeSwitcher = () => {
 const getTooltipText = (scheme: ColorScheme) => {
   switch (scheme) {
     case 'dark':
-      return 'Active light mode';
+      return 'Activate light mode';
     case 'light':
       return 'Activate dark mode';
   }
