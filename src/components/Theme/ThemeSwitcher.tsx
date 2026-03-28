@@ -5,8 +5,8 @@ import {
   useMantineColorScheme,
 } from '@mantine/core';
 import React from 'react';
-import { BsFillMoonStarsFill, BsSunFill } from 'react-icons/bs';
 import { useTranslation } from 'react-i18next';
+import { BsFillMoonStarsFill, BsSunFill } from 'react-icons/bs';
 
 export const ThemeSwitcher = () => {
   const { toggleColorScheme } = useMantineColorScheme();
@@ -18,10 +18,16 @@ export const ThemeSwitcher = () => {
   return (
     <Tooltip
       label={
-        computedColorScheme === 'light' ? t('theme.activateDark') : t('theme.activateLight')
+        computedColorScheme === 'light'
+          ? t('theme.activateDark')
+          : t('theme.activateLight')
       }
     >
-      <ActionIcon onClick={() => toggleColorScheme()} style={{ color: 'inherit' }} variant='transparent'>
+      <ActionIcon
+        onClick={() => toggleColorScheme()}
+        style={{ color: 'inherit' }}
+        variant="transparent"
+      >
         {computedColorScheme === 'light' ? <BsFillMoonStarsFill /> : <BsSunFill />}
       </ActionIcon>
     </Tooltip>

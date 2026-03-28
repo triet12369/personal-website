@@ -6,8 +6,8 @@ import { TITLE_PREFIX } from '../../config';
 import { Github } from '../Navigation/Github';
 import { NameText } from '../Navigation/NameText';
 import { NavBar } from '../Navigation/NavBar';
-import { Footer } from './Footer';
 
+import { Footer } from './Footer';
 import styles from './Layout.module.scss';
 // import { useBackgroundSwipe } from './useBackgroundSwipe';
 

@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 
 // import bgImage from './Askar RNC - Starless - Rod Prazeres_1773044125.png';
-import bgImage from './IC1805-20251103-JPG.jpg';
 import styles from './CosmosHero.module.scss';
+import bgImage from './IC1805-20251103-JPG.jpg';
 
 // ─── Tune this value (0 = invisible, 1 = fully opaque) ────────────────────────
 const BG_IMAGE_OPACITY = 0.75;
@@ -54,10 +54,6 @@ const PALETTE: Palette = {
 
 function rand(min: number, max: number) {
   return Math.random() * (max - min) + min;
-}
-
-function randInt(min: number, max: number) {
-  return Math.floor(rand(min, max + 1));
 }
 
 function makeStars(count: number, w: number, h: number, palette: Palette): Star[] {
@@ -120,13 +116,19 @@ export const CosmosHero: React.FC = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Non-nullable aliases so nested closures don't lose type narrowing
+    const el: HTMLCanvasElement = canvas;
+    const c: CanvasRenderingContext2D = ctx;
+
     const palette = PALETTE;
 
     // ── Background image ────────────────────────────────────────────────────
     const img = new Image();
     img.src = bgImage.src;
     let imgReady = false;
-    img.onload = () => { imgReady = true; };
+    img.onload = () => {
+      imgReady = true;
+    };
 
     // ── Resize ──────────────────────────────────────────────────────────────
     let w = 0;
@@ -138,10 +140,10 @@ export const CosmosHero: React.FC = () => {
     const SPAWN_INTERVAL = 80; // frames between spawn attempts
 
     function resize() {
-      w = canvas!.offsetWidth;
-      h = canvas!.offsetHeight;
-      canvas!.width = w;
-      canvas!.height = h;
+      w = el.offsetWidth;
+      h = el.offsetHeight;
+      el.width = w;
+      el.height = h;
       stars = makeStars(180, w, h, palette);
     }
 
@@ -151,8 +153,8 @@ export const CosmosHero: React.FC = () => {
     // ── Animation loop ───────────────────────────────────────────────────────
     function draw() {
       // Solid background colour
-      ctx!.fillStyle = palette.bg;
-      ctx!.fillRect(0, 0, w, h);
+      c.fillStyle = palette.bg;
+      c.fillRect(0, 0, w, h);
 
       // Cover-fit background image
       if (imgReady) {
@@ -170,9 +172,9 @@ export const CosmosHero: React.FC = () => {
           sx = 0;
           sy = (img.naturalHeight - sh) / 2;
         }
-        ctx!.globalAlpha = BG_IMAGE_OPACITY;
-        ctx!.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
-        ctx!.globalAlpha = 1;
+        c.globalAlpha = BG_IMAGE_OPACITY;
+        c.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+        c.globalAlpha = 1;
       }
 
       // Static stars (twinkle)
@@ -183,10 +185,10 @@ export const CosmosHero: React.FC = () => {
         }
         s.alpha = Math.max(0, Math.min(palette.maxStarAlpha, s.alpha));
 
-        ctx!.beginPath();
-        ctx!.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx!.fillStyle = palette.starColor(s.alpha);
-        ctx!.fill();
+        c.beginPath();
+        c.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        c.fillStyle = palette.starColor(s.alpha);
+        c.fill();
       }
 
       // Spawn shooting stars
@@ -229,27 +231,27 @@ export const CosmosHero: React.FC = () => {
         const tailX = ss.x - ss.vx * (ss.trailLength / 14);
         const tailY = ss.y - ss.vy * (ss.trailLength / 14);
 
-        const grad = ctx!.createLinearGradient(tailX, tailY, ss.x, ss.y);
+        const grad = c.createLinearGradient(tailX, tailY, ss.x, ss.y);
         grad.addColorStop(0, palette.shootTail(0));
         grad.addColorStop(0.7, palette.shootTail(ss.alpha * 0.6));
         grad.addColorStop(1, palette.shootColor(ss.alpha));
 
-        ctx!.beginPath();
-        ctx!.moveTo(tailX, tailY);
-        ctx!.lineTo(ss.x, ss.y);
-        ctx!.strokeStyle = grad;
-        ctx!.lineWidth = 1.5;
-        ctx!.lineCap = 'round';
-        ctx!.stroke();
+        c.beginPath();
+        c.moveTo(tailX, tailY);
+        c.lineTo(ss.x, ss.y);
+        c.strokeStyle = grad;
+        c.lineWidth = 1.5;
+        c.lineCap = 'round';
+        c.stroke();
 
         // Head glow
-        const glow = ctx!.createRadialGradient(ss.x, ss.y, 0, ss.x, ss.y, 3.5);
+        const glow = c.createRadialGradient(ss.x, ss.y, 0, ss.x, ss.y, 3.5);
         glow.addColorStop(0, palette.shootColor(ss.alpha));
         glow.addColorStop(1, palette.shootColor(0));
-        ctx!.beginPath();
-        ctx!.arc(ss.x, ss.y, 3.5, 0, Math.PI * 2);
-        ctx!.fillStyle = glow;
-        ctx!.fill();
+        c.beginPath();
+        c.arc(ss.x, ss.y, 3.5, 0, Math.PI * 2);
+        c.fillStyle = glow;
+        c.fill();
 
         // Advance position
         ss.x += ss.vx;
@@ -261,11 +263,11 @@ export const CosmosHero: React.FC = () => {
       const creditText = 'Heart Nebula, taken from my backyard';
       const padding = 10;
       const yOffset = 20;
-      ctx!.font = '11px system-ui, sans-serif';
-      ctx!.textAlign = 'right';
-      ctx!.textBaseline = 'bottom';
-      ctx!.fillStyle = 'rgba(255,255,255,1)';
-      ctx!.fillText(creditText, w - padding, h - padding - yOffset);
+      c.font = '11px system-ui, sans-serif';
+      c.textAlign = 'right';
+      c.textBaseline = 'bottom';
+      c.fillStyle = 'rgba(255,255,255,1)';
+      c.fillText(creditText, w - padding, h - padding - yOffset);
 
       rafRef.current = requestAnimationFrame(draw);
     }
