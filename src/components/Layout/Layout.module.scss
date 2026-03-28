@@ -4,8 +4,9 @@
   min-height: 100vh;
   min-height: 100dvh;
   flex: 1;
-  background-color: var(--mantine-color-body);
-  transition: background-color 300ms ease;
+  position: relative;
+  z-index: 1;
+  background: transparent;
 }
 
 .header {

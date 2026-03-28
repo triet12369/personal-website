@@ -6,6 +6,7 @@ import { TITLE_PREFIX } from '../../config';
 import { Github } from '../Navigation/Github';
 import { NameText } from '../Navigation/NameText';
 import { NavBar } from '../Navigation/NavBar';
+import { StarBackground } from '../StarBackground/StarBackground';
 
 import { Footer } from './Footer';
 import styles from './Layout.module.scss';
@@ -21,6 +22,7 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = (props) => {
 
   return (
     <main className={styles.layout}>
+      <StarBackground />
       <Head>{title && <title>{`${TITLE_PREFIX} | ${title}`}</title>}</Head>
       <header className={styles.header}>
         <Group gap="md" align="center" justify="center">
