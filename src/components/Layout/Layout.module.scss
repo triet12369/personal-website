@@ -1,17 +1,11 @@
 .layout {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
   min-height: 100dvh;
-  grid-template-rows: auto 1fr auto;
-  background-image: linear-gradient(
-    to bottom,
-    var(--darkBg) 0%,
-    var(--darkBg) 33.33%,
-    var(--lightBg) 66.66%,
-    var(--lightBg) 100%
-  );
-  background-size: 100% 300%;
-  background-position: 0% 100%;
+  flex: 1;
+  background-color: var(--mantine-color-body);
+  transition: background-color 300ms ease;
 }
 
 .header {
@@ -19,12 +13,6 @@
   --padding: var(--mantine-spacing-md);
   margin: var(--padding);
   display: flex;
-  flex-grow: 1;
   align-items: center;
   justify-content: space-between;
-}
-
-.footer {
-  color: #e3dfdb;
-  background-color: #847665;
 }

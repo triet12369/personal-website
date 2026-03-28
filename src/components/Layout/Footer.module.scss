@@ -1,0 +1,22 @@
+.footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 1rem;
+  font-size: 0.78rem;
+  color: #6c6053;
+  border-top: 1px solid rgba(132, 118, 101, 0.2);
+}
+
+.iconLink {
+  color: #6c6053;
+  display: flex;
+  align-items: center;
+  transition: color 150ms ease;
+
+  &:hover {
+    color: #e3dfdb;
+  }
+}

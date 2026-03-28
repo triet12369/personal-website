@@ -11,7 +11,7 @@ export const ThemeProvider: FC<PropsWithChildren> = (props) => {
     <MantineProvider
       theme={MY_DEFAULT_THEME}
       colorSchemeManager={colorSchemeManager}
-      defaultColorScheme="light"
+      defaultColorScheme="dark"
     >
       {props.children}
     </MantineProvider>

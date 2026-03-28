@@ -1,9 +1,10 @@
-import { Button, Container, Group, Title } from '@mantine/core';
+import { Container, Title } from '@mantine/core';
 import { GetStaticProps } from 'next';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { PostTimeline } from '../components/Blog/PostTimeline';
+import { CosmosHero } from '../components/Hero/CosmosHero';
 import { Layout } from '../components/Layout/Layout';
 import { getAllPosts } from '../lib/blog';
 import { BlogPost } from '../types';
@@ -17,10 +18,10 @@ export default function IndexPage({ recentPosts }: HomePageProps) {
 
   return (
     <Layout title={t('home.pageTitle')}>
-      <Group mt={50} justify="center">
-        <Button size="xl">{t('home.helloButton')}</Button>
-      </Group>
-      <Container size="md" py="xl">
+      <div style={{ height: '60vh' }}>
+        <CosmosHero />
+      </div>
+      <Container size="md" pt="md" pb="xl">
         <Title order={2} mb="xl">
           {t('home.recentPosts')}
         </Title>

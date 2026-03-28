@@ -5,6 +5,11 @@
   --backgroundColor: light-dark(var(--lightBg), var(--darkBg));
 }
 
+/* Override Mantine body color per scheme */
+[data-mantine-color-scheme='light'] {
+  --mantine-color-body: #6c6053;
+  /* pantone[7] */
+}
 body {
   background-color: light-dark(var(--lightBg), var(--darkBg));
   transition-property: color, background-color;
