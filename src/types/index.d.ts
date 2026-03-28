@@ -16,4 +16,5 @@ export type BlogPostFrontmatter = {
 export type BlogPost = {
   slug: string;
   frontmatter: BlogPostFrontmatter;
+  frontmatter_vi?: BlogPostFrontmatter;
 };

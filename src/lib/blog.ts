@@ -26,7 +26,20 @@ export function getAllPosts(): BlogPost[] {
             ? data.date.toISOString().slice(0, 10)
             : String(data.date),
       };
-      return { slug, frontmatter };
+      const viPath = path.join(BLOG_DIR, slug, 'index.vi.mdx');
+      let frontmatter_vi: BlogPostFrontmatter | undefined;
+      if (fs.existsSync(viPath)) {
+        const viRaw = fs.readFileSync(viPath, 'utf-8');
+        const { data: viData } = matter(viRaw);
+        frontmatter_vi = {
+          ...(viData as BlogPostFrontmatter),
+          date:
+            viData.date instanceof Date
+              ? viData.date.toISOString().slice(0, 10)
+              : String(viData.date),
+        };
+      }
+      return { slug, frontmatter, frontmatter_vi };
     })
     .sort(
       (a, b) =>
@@ -37,6 +50,8 @@ export function getAllPosts(): BlogPost[] {
 export function getPostBySlug(slug: string): {
   frontmatter: BlogPostFrontmatter;
   content: string;
+  frontmatter_vi?: BlogPostFrontmatter;
+  content_vi?: string;
 } {
   const raw = fs.readFileSync(path.join(BLOG_DIR, slug, 'index.mdx'), 'utf-8');
   const { data, content } = matter(raw);
@@ -47,5 +62,18 @@ export function getPostBySlug(slug: string): {
         ? data.date.toISOString().slice(0, 10)
         : String(data.date),
   };
+  const viPath = path.join(BLOG_DIR, slug, 'index.vi.mdx');
+  if (fs.existsSync(viPath)) {
+    const viRaw = fs.readFileSync(viPath, 'utf-8');
+    const { data: viData, content: content_vi } = matter(viRaw);
+    const frontmatter_vi: BlogPostFrontmatter = {
+      ...(viData as BlogPostFrontmatter),
+      date:
+        viData.date instanceof Date
+          ? viData.date.toISOString().slice(0, 10)
+          : String(viData.date),
+    };
+    return { frontmatter, content, frontmatter_vi, content_vi };
+  }
   return { frontmatter, content };
 }

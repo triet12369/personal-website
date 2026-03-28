@@ -7,6 +7,7 @@ export const LS_PREFIX = 'TCPAGE_';
  */
 export const LS_KEYS = {
   THEME: `${LS_PREFIX}THEME`,
+  LANG: `${LS_PREFIX}LANG`,
 } as const;
 
 export const getCurrentTheme = (): ColorScheme | null => {

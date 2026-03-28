@@ -1,6 +1,7 @@
 import { Container, Title } from '@mantine/core';
 import { GetStaticProps } from 'next';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { PostTimeline } from '../../components/Blog/PostTimeline';
 import { Layout } from '../../components/Layout/Layout';
@@ -12,11 +13,13 @@ type BlogIndexProps = {
 };
 
 export default function BlogIndexPage({ posts }: BlogIndexProps) {
+  const { t } = useTranslation();
+
   return (
-    <Layout title="Blog">
+    <Layout title={t('blog.pageTitle')}>
       <Container size="md" py="xl">
         <Title order={1} mb="xl">
-          Blog
+          {t('blog.heading')}
         </Title>
         <PostTimeline posts={posts} />
       </Container>

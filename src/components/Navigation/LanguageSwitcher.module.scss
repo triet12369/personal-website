@@ -1,0 +1,36 @@
+@use '../../styles/mixins' as *;
+
+.switcher {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.btn {
+  @include hover-styles;
+
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  color: inherit;
+  opacity: 0.45;
+  transition: opacity 0.15s ease;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  font-family: inherit;
+
+  &.active {
+    opacity: 1;
+  }
+}
+
+.divider {
+  opacity: 0.25;
+  user-select: none;
+}

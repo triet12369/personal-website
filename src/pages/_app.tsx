@@ -6,6 +6,7 @@ import { AppProps } from 'next/app';
 import Head from 'next/head';
 
 import { TITLE_PREFIX } from '../config';
+import { LanguageProvider } from '../providers/LanguageProvider';
 import { ThemeProvider } from '../providers/ThemeProvider';
 
 export default function App(props: AppProps) {
@@ -25,7 +26,9 @@ export default function App(props: AppProps) {
         />
       </Head>
       <ThemeProvider>
-        <Component {...pageProps} />
+        <LanguageProvider>
+          <Component {...pageProps} />
+        </LanguageProvider>
       </ThemeProvider>
     </>
   );

@@ -1,6 +1,7 @@
 import { Button, Container, Group, Title } from '@mantine/core';
 import { GetStaticProps } from 'next';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { PostTimeline } from '../components/Blog/PostTimeline';
 import { Layout } from '../components/Layout/Layout';
@@ -12,14 +13,16 @@ type HomePageProps = {
 };
 
 export default function IndexPage({ recentPosts }: HomePageProps) {
+  const { t } = useTranslation();
+
   return (
-    <Layout title="Home">
+    <Layout title={t('home.pageTitle')}>
       <Group mt={50} justify="center">
-        <Button size="xl">Hello World</Button>
+        <Button size="xl">{t('home.helloButton')}</Button>
       </Group>
       <Container size="md" py="xl">
         <Title order={2} mb="xl">
-          Recent Posts
+          {t('home.recentPosts')}
         </Title>
         <PostTimeline posts={recentPosts} />
       </Container>

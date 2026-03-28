@@ -1,12 +1,16 @@
 import { Group } from '@mantine/core';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Layout } from '../../components/Layout/Layout';
 
 export default function IndexPage() {
+  const { t } = useTranslation();
+
   return (
-    <Layout title="Projects">
+    <Layout title={t('projects.pageTitle')}>
       <Group mt={50} justify="center">
-        Project hehe
+        {t('projects.placeholder')}
       </Group>
     </Layout>
   );
