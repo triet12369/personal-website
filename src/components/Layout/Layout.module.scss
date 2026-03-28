@@ -6,17 +6,12 @@
   background-image: linear-gradient(
     to bottom,
     var(--darkBg) 0%,
-    var(--darkBg) 50%,
-    var(--lightBg) 50%,
+    var(--darkBg) 33.33%,
+    var(--lightBg) 66.66%,
     var(--lightBg) 100%
   );
-  background-size: 100% 200%;
+  background-size: 100% 300%;
   background-position: 0% 100%;
-  transition: background-position 600ms ease-in-out;
-}
-
-:global([data-mantine-color-scheme='dark']) .layout {
-  background-position: 0% 0%;
 }
 
 .header {
