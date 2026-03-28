@@ -1,5 +1,6 @@
 import type { MDXRemoteProps } from 'next-mdx-remote';
 
+import { FortuneCookieWidget } from '../../content/blog/hello-world/FortuneCookieWidget';
 import { WeatherWidget } from '../../content/blog/hello-world/WeatherWidget';
 
 /**
@@ -13,5 +14,5 @@ import { WeatherWidget } from '../../content/blog/hello-world/WeatherWidget';
  * render time, so they are only available inside that specific post.
  */
 export const POST_COMPONENTS: Record<string, MDXRemoteProps['components']> = {
-  'hello-world': { WeatherWidget },
+  'hello-world': { WeatherWidget, FortuneCookieWidget },
 };

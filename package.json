@@ -15,6 +15,7 @@
     "@mantine/core": "8.3.18",
     "@mantine/hooks": "8.3.18",
     "canvas-confetti": "^1.9.4",
+    "gifuct-js": "^2.1.2",
     "gray-matter": "^4.0.3",
     "i18next": "^23.16.8",
     "next": "12.2.4",
