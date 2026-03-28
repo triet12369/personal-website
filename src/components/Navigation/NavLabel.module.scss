@@ -23,7 +23,7 @@
   overflow: visible;
   color: var(--mantine-color-text);
   opacity: 1;
-  padding: 0.2em 0.4em;
+  padding: var(--mantine-spacing-xs);
   transition: opacity 200ms ease;
 
   /* top-left anchor: draws top edge → right edge */
