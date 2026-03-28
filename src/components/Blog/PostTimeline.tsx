@@ -38,6 +38,11 @@ export const PostTimeline: React.FC<PostTimelineProps> = ({ posts }) => {
               })}
             </time>
             <div className={styles.content}>
+              {post.imageUrl && (
+                <div className={styles.imageWrapper}>
+                  <img src={post.imageUrl} alt={fm.title} className={styles.image} />
+                </div>
+              )}
               <Link href={href} passHref>
                 <a
                   className={styles.title}

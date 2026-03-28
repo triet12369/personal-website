@@ -4,6 +4,7 @@ import path from 'path';
 import matter from 'gray-matter';
 
 import { BlogPost, BlogPostFrontmatter } from '../types';
+import { resolveContentImage } from './resolveContentImage';
 
 const BLOG_DIR = path.join(process.cwd(), 'src/content/blog');
 
@@ -39,7 +40,8 @@ export function getAllPosts(): BlogPost[] {
               : String(viData.date),
         };
       }
-      return { slug, frontmatter, frontmatter_vi };
+      const imageUrl = resolveContentImage(path.join(BLOG_DIR, slug), frontmatter.image);
+      return { slug, frontmatter, frontmatter_vi, ...(imageUrl && { imageUrl }) };
     })
     .sort(
       (a, b) =>

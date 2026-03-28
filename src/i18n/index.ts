@@ -21,7 +21,8 @@ const resources = {
       },
       projects: {
         pageTitle: 'Projects',
-        placeholder: 'Project hehe',
+        heading: 'Projects',
+        noProjectsYet: 'No projects yet.',
       },
       layout: {
         footer: 'My footer',
@@ -51,7 +52,8 @@ const resources = {
       },
       projects: {
         pageTitle: 'Dự án',
-        placeholder: 'Dự án hehe',
+        heading: 'Các dự án',
+        noProjectsYet: 'Chưa có dự án.',
       },
       layout: {
         footer: 'Footer của tôi',

@@ -28,6 +28,9 @@ yarn-error.log*
 # local env files
 .env*.local
 
+# colocated content images (auto-copied to public at build time)
+/public/content/
+
 # vercel
 .vercel
 

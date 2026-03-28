@@ -11,10 +11,27 @@ export type BlogPostFrontmatter = {
   description?: string;
   tags?: string[];
   href?: string;
+  image?: string;
 };
 
 export type BlogPost = {
   slug: string;
   frontmatter: BlogPostFrontmatter;
   frontmatter_vi?: BlogPostFrontmatter;
+  imageUrl?: string;
+};
+
+export type ProjectFrontmatter = {
+  title: string;
+  description: string;
+  href?: string;
+  techStack?: string[];
+  image?: string;
+};
+
+export type Project = {
+  slug: string;
+  frontmatter: ProjectFrontmatter;
+  frontmatter_vi?: ProjectFrontmatter;
+  imageUrl?: string;
 };
