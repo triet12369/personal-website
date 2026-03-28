@@ -41,7 +41,7 @@ export default function BlogPostPage({
   const locale = showVi ? 'vi-VN' : 'en-US';
 
   return (
-    <Layout title={activeFm.title}>
+    <Layout title={activeFm.title} blurBackground>
       <Container size="md" py="xl">
         <Title order={1} mb="xs">
           {activeFm.title}

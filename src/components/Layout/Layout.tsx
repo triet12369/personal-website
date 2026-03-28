@@ -14,15 +14,16 @@ import styles from './Layout.module.scss';
 
 type LayoutProps = {
   title?: string;
+  blurBackground?: boolean;
 };
 
 export const Layout: FC<PropsWithChildren<LayoutProps>> = (props) => {
-  const { title } = props;
+  const { title, blurBackground } = props;
   // const layoutRef = useBackgroundSwipe();
 
   return (
     <main className={styles.layout}>
-      <StarBackground />
+      <StarBackground blur={blurBackground} />
       <Head>{title && <title>{`${TITLE_PREFIX} | ${title}`}</title>}</Head>
       <header className={styles.header}>
         <Group gap="md" align="center" justify="center">

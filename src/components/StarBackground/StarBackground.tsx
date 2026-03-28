@@ -104,7 +104,11 @@ function spawnShootingStar(w: number, h: number, palette: Palette): ShootingStar
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export const StarBackground: React.FC = () => {
+interface StarBackgroundProps {
+  blur?: boolean;
+}
+
+export const StarBackground: React.FC<StarBackgroundProps> = ({ blur = false }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
   const colorScheme = useComputedColorScheme('dark', { getInitialValueInEffect: true });
@@ -141,8 +145,14 @@ export const StarBackground: React.FC = () => {
       stars = makeStars(180, w, h, paletteRef.current);
     }
 
+    let resizeTimer: ReturnType<typeof setTimeout>;
+    function onResize() {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(resize, 150);
+    }
+
     resize();
-    window.addEventListener('resize', resize);
+    window.addEventListener('resize', onResize);
 
     function draw() {
       const palette = paletteRef.current;
@@ -232,9 +242,10 @@ export const StarBackground: React.FC = () => {
 
     return () => {
       cancelAnimationFrame(rafRef.current);
-      window.removeEventListener('resize', resize);
+      clearTimeout(resizeTimer);
+      window.removeEventListener('resize', onResize);
     };
   }, []);
 
-  return <canvas ref={canvasRef} className={styles.canvas} />;
+  return <canvas ref={canvasRef} className={`${styles.canvas}${blur ? ` ${styles.blurred}` : ''}`} />;
 };

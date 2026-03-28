@@ -34,7 +34,7 @@ export default function ProjectPage({
   const activeMdx = showVi && mdxSource_vi ? mdxSource_vi : mdxSource;
 
   return (
-    <Layout title={activeFm.title}>
+    <Layout title={activeFm.title} blurBackground>
       <Container size="md" py="xl">
         <Title order={1} mb="xs">
           {activeFm.title}
