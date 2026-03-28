@@ -13,6 +13,7 @@ interface Star {
   alpha: number;
   twinkleSpeed: number;
   twinkleDir: 1 | -1;
+  color: [number, number, number]; // RGB
 }
 
 interface ShootingStar {
@@ -59,6 +60,32 @@ function rand(min: number, max: number) {
   return Math.random() * (max - min) + min;
 }
 
+// Star spectral colors (no green): weighted toward white/blue-white
+// Weights: white 55%, blue-white 20%, yellow-white 10%, yellow 7%, orange 5%, red 3%
+const STAR_COLORS: Array<[number, number, number]> = [
+  [220, 230, 255], // blue-white (O/B type)
+  [200, 215, 255], // blue-white variant
+  [255, 255, 255], // pure white (A type)
+  [240, 240, 255], // white with slight blue
+  [255, 255, 240], // white with slight yellow
+  [255, 250, 210], // yellow-white (F type)
+  [255, 240, 160], // yellow (G type)
+  [255, 200, 100], // orange (K type)
+  [255, 160, 100], // orange-red
+  [255, 120, 100], // red (M type)
+];
+const STAR_COLOR_WEIGHTS = [18, 15, 12, 10, 10, 10, 7, 5, 2, 1]; // sums to 90 (adjust for white majority)
+
+function pickStarColor(): [number, number, number] {
+  const total = STAR_COLOR_WEIGHTS.reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < STAR_COLORS.length; i++) {
+    r -= STAR_COLOR_WEIGHTS[i];
+    if (r <= 0) return STAR_COLORS[i];
+  }
+  return STAR_COLORS[0];
+}
+
 function makeStars(count: number, w: number, h: number, palette: Palette): Star[] {
   return Array.from({ length: count }, () => {
     const baseAlpha = rand(0.15, palette.maxStarAlpha);
@@ -70,6 +97,7 @@ function makeStars(count: number, w: number, h: number, palette: Palette): Star[
       alpha: baseAlpha,
       twinkleSpeed: rand(0.003, 0.011),
       twinkleDir: Math.random() > 0.5 ? 1 : -1,
+      color: pickStarColor(),
     };
   });
 }
@@ -113,10 +141,12 @@ export const StarBackground: React.FC<StarBackgroundProps> = ({ blur = false }) 
   const rafRef = useRef<number>(0);
   const colorScheme = useComputedColorScheme('dark', { getInitialValueInEffect: true });
   const paletteRef = useRef<Palette>(DARK_PALETTE);
+  const colorSchemeRef = useRef(colorScheme);
 
   // Swap palette immediately without restarting the animation loop
   useEffect(() => {
     paletteRef.current = colorScheme === 'dark' ? DARK_PALETTE : LIGHT_PALETTE;
+    colorSchemeRef.current = colorScheme;
   }, [colorScheme]);
 
   // Animation loop — runs once on mount
@@ -135,7 +165,7 @@ export const StarBackground: React.FC<StarBackgroundProps> = ({ blur = false }) 
     const MAX_SHOOTING = 4;
     const shootingStars: ShootingStar[] = [];
     let spawnTimer = 0;
-    const SPAWN_INTERVAL = 90;
+    const SPAWN_INTERVAL = 80;
 
     function resize() {
       w = el.offsetWidth;
@@ -170,7 +200,9 @@ export const StarBackground: React.FC<StarBackgroundProps> = ({ blur = false }) 
 
         c.beginPath();
         c.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        c.fillStyle = palette.starColor(s.alpha);
+        c.fillStyle = colorSchemeRef.current === 'dark'
+          ? `rgba(${s.color[0]},${s.color[1]},${s.color[2]},${s.alpha})`
+          : palette.starColor(s.alpha);
         c.fill();
       }
 
