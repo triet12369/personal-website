@@ -1,7 +1,9 @@
 import { Container, Title } from '@mantine/core';
+import fs from 'fs';
 import { GetStaticPaths, GetStaticProps } from 'next';
 import { MDXRemote, MDXRemoteSerializeResult } from 'next-mdx-remote';
 import { serialize } from 'next-mdx-remote/serialize';
+import path from 'path';
 import React from 'react';
 
 import { MDXComponents } from '../../components/Blog/MDXComponents';
@@ -9,7 +11,11 @@ import { POST_COMPONENTS } from '../../components/Blog/registry';
 import { Layout } from '../../components/Layout/Layout';
 import { useLanguage } from '../../hooks/useLanguage';
 import { getAllPosts, getPostBySlug } from '../../lib/blog';
+import { resolveContentImage } from '../../lib/resolveContentImage';
 import { BlogPostFrontmatter } from '../../types';
+
+// Extensions treated as source files — never copied to /public.
+const SOURCE_EXTS = new Set(['.mdx', '.tsx', '.ts', '.scss', '.css']);
 
 type BlogPostPageProps = {
   frontmatter: BlogPostFrontmatter;
@@ -100,6 +106,15 @@ export const getStaticProps: GetStaticProps<BlogPostPageProps> = async ({ params
 
   if (frontmatter.href) {
     return { redirect: { destination: frontmatter.href, permanent: false } };
+  }
+
+  // Auto-copy every non-source file co-located in the post directory to /public
+  // so they are served as static assets (e.g. GIFs, images, audio).
+  const postDir = path.join(process.cwd(), 'src/content/blog', slug);
+  for (const entry of fs.readdirSync(postDir, { withFileTypes: true })) {
+    if (entry.isFile() && !SOURCE_EXTS.has(path.extname(entry.name).toLowerCase())) {
+      resolveContentImage(postDir, entry.name);
+    }
   }
 
   const mdxSource = await serialize(content);
