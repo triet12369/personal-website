@@ -5,7 +5,7 @@ import { Layout } from '../../components/Layout/Layout';
 export default function IndexPage() {
   return (
     <Layout title="Projects">
-      <Group mt={50} position="center">
+      <Group mt={50} justify="center">
         Project hehe
       </Group>
     </Layout>

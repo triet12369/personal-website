@@ -1,0 +1,13 @@
+@mixin link-styles {
+  &:visited,
+  &:link {
+    text-decoration: none;
+    color: inherit;
+  }
+}
+
+@mixin hover-styles {
+  &:hover {
+    filter: brightness(1.2);
+  }
+}

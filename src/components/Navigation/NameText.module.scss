@@ -1,0 +1,16 @@
+@use '../../styles/mixins' as *;
+
+.text {
+  @include link-styles;
+  @include hover-styles;
+
+  display: flex;
+  align-items: center;
+  color: inherit;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 400;
+  font-family: monospace, sans-serif;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}

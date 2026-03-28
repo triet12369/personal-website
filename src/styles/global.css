@@ -1,0 +1,13 @@
+/* pantone[0] = #f6f4f3, darken(pantone[9]=#3c362e, 0.5) = #1e1b17 */
+:root {
+  --lightBg: #f6f4f3;
+  --darkBg: #1e1b17;
+  --backgroundColor: light-dark(var(--lightBg), var(--darkBg));
+}
+
+body {
+  background-color: light-dark(var(--lightBg), var(--darkBg));
+  transition-property: color, background-color;
+  transition-duration: 300ms;
+  transition-timing-function: ease;
+}

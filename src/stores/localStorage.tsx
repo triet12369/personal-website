@@ -1,4 +1,4 @@
-import { ColorScheme } from '@mantine/core';
+type ColorScheme = 'light' | 'dark';
 
 export const LS_PREFIX = 'TCPAGE_';
 

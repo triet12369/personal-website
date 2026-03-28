@@ -1,0 +1,34 @@
+.layout {
+  display: grid;
+  min-height: 100vh;
+  min-height: 100dvh;
+  grid-template-rows: auto 1fr auto;
+  background-image: linear-gradient(
+    to bottom,
+    var(--darkBg) 0%,
+    var(--darkBg) 50%,
+    var(--lightBg) 50%,
+    var(--lightBg) 100%
+  );
+  background-size: 100% 200%;
+  background-position: 0% 100%;
+  transition: background-position 600ms ease-in-out;
+}
+
+:global([data-mantine-color-scheme='dark']) .layout {
+  background-position: 0% 0%;
+}
+
+.header {
+  position: relative;
+  --padding: var(--mantine-spacing-md);
+  margin: var(--padding);
+  display: flex;
+  flex-grow: 1;
+  align-items: center;
+}
+
+.footer {
+  color: #e3dfdb;
+  background-color: #847665;
+}
