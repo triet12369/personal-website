@@ -21,6 +21,9 @@ export const NavBar: FC<INavBarProps> = (props) => {
       <Link key={ROUTES.HOME.label} href={ROUTES.HOME.href} passHref>
         <NavLabel isDropdown={isDropdown}>{ROUTES.HOME.label}</NavLabel>
       </Link>
+      <Link key={ROUTES.BLOG.label} href={ROUTES.BLOG.href} passHref>
+        <NavLabel isDropdown={isDropdown}>{ROUTES.BLOG.label}</NavLabel>
+      </Link>
       <Link key={ROUTES.PROJECTS.label} href={ROUTES.PROJECTS.href} passHref>
         <NavLabel isDropdown={isDropdown}>{ROUTES.PROJECTS.label}</NavLabel>
       </Link>

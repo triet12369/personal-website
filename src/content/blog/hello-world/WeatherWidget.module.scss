@@ -1,0 +1,37 @@
+.widget {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--mantine-color-default-border);
+  background: var(--mantine-color-default);
+  margin: 1rem 0;
+  font-family: monospace, sans-serif;
+}
+
+.icon {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.temp {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.label {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.muted {
+  font-size: 0.8rem;
+  opacity: 0.55;
+}
+
+.error {
+  font-size: 0.85rem;
+  opacity: 0.7;
+}

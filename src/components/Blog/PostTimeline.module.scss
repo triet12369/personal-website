@@ -1,0 +1,78 @@
+.timeline {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 8rem 1fr;
+  gap: 1.5rem;
+  align-items: start;
+
+  @mixin smaller-than ($mantine-breakpoint-sm) {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+}
+
+.date {
+  font-size: 0.8rem;
+  opacity: 0.6;
+  padding-top: 0.2rem;
+  white-space: nowrap;
+  font-family: monospace, sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 150ms ease;
+
+  &:hover {
+    opacity: 0.7;
+  }
+}
+
+.description {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.75;
+  line-height: 1.5;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tag {
+  font-size: 0.75rem;
+  font-family: monospace, sans-serif;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  opacity: 0.6;
+}
+
+.empty {
+  opacity: 0.5;
+  font-style: italic;
+}

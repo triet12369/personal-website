@@ -13,6 +13,12 @@ export const ROUTES = {
       pathname: '/',
     },
   }),
+  BLOG: cs({
+    label: 'Blog',
+    href: {
+      pathname: '/blog',
+    },
+  }),
   PROJECTS: cs({
     label: 'Projects',
     href: {
