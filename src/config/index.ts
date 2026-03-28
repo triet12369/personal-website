@@ -1,1 +1,1 @@
-export const TITLE_PREFIX = "Triet Cao's Space";
+export const TITLE_PREFIX = "Triet (Tristan) Cao's Space";
