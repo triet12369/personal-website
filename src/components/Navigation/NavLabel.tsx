@@ -24,7 +24,6 @@ export const NavLabel = forwardRef((props: INavLabelProps, ref) => {
       className={`${styles.label}${isActive ? ` ${styles.active}` : ''}`}
     >
       {children}
-      <div className="animator" />
     </a>
   );
 });

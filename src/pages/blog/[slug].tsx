@@ -42,7 +42,14 @@ export default function BlogPostPage({
         </Title>
         <time
           dateTime={activeFm.date}
-          style={{ opacity: 0.6, fontSize: '0.85rem', fontFamily: 'monospace' }}
+          style={{
+            opacity: 0.85,
+            fontSize: '0.72rem',
+            fontFamily: "'Raleway', sans-serif",
+            fontWeight: 500,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+          }}
         >
           {new Date(activeFm.date).toLocaleDateString(locale, {
             year: 'numeric',

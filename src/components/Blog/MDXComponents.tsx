@@ -15,7 +15,7 @@ export const MDXComponents: MDXComponents = {
     <Title order={3} mt="lg" mb="sm" {...props} />
   ),
   p: (props: ComponentPropsWithoutRef<'p'>) => (
-    <Text component="p" mb="sm" style={{ lineHeight: 1.75 }} {...props} />
+    <Text component="p" mb="sm" style={{ lineHeight: 1.75, fontWeight: 400 }} {...props} />
   ),
   a: ({ href, ...props }: ComponentPropsWithoutRef<'a'>) => (
     <Anchor

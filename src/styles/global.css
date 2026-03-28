@@ -3,16 +3,41 @@
   --lightBg: #f6f4f3;
   --darkBg: #1e1b17;
   --backgroundColor: light-dark(var(--lightBg), var(--darkBg));
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+    --font-ui: 'Raleway', -apple-system, BlinkMacSystemFont, sans-serif;
+    --site-radius: var(--mantine-radius-sm);
 }
 
 /* Override Mantine body color per scheme */
 [data-mantine-color-scheme='light'] {
-  --mantine-color-body: #6c6053;
-  /* pantone[7] */
+  --mantine-color-body: #f6f4f3;
+    --mantine-color-text: #1e1b17;
+  }
+  
+  [data-mantine-color-scheme='dark'] {
+    --mantine-color-body: #1e1b17;
+    --mantine-color-text: #e3dfdb;
 }
 body {
   background-color: light-dark(var(--lightBg), var(--darkBg));
+  color: var(--mantine-color-text);
+    font-family: var(--font-ui);
+    font-weight: 400;
+    letter-spacing: 0.01em;
   transition-property: color, background-color;
   transition-duration: 300ms;
   transition-timing-function: ease;
+}
+
+/* Mantine heading overrides — editorial serif */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.mantine-Title-root {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.02em;
 }

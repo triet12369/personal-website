@@ -16,8 +16,12 @@ export const COLOR_PANTONE_ARRAY = [
 ] as const;
 
 const MY_DEFAULT_THEME = createTheme({
-  fontFamily:
-    '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif,Apple Color Emoji,Segoe UI Emoji',
+  fontFamily: "'Raleway', -apple-system, BlinkMacSystemFont, sans-serif",
+  fontFamilyMonospace: "'Raleway', monospace",
+  headings: {
+    fontFamily: "'Cormorant Garamond', Georgia, serif",
+    fontWeight: '400',
+  },
   colors: {
     [COLOR_PANTONE]: COLOR_PANTONE_ARRAY as [
       string,

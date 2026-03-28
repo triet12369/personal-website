@@ -52,20 +52,20 @@
 /* ── Dropdown menu ─────────────────────────────────────────── */
 .dropdown {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 12px);
   right: 0;
   z-index: 100;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  padding: 0.75rem 1rem;
+  gap: 0.15rem;
+  padding: 1rem 1.25rem;
   background: var(--mantine-color-body);
-  border: 1px solid var(--mantine-color-default-border);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  min-width: 140px;
+  border: 1px solid rgba(132, 118, 101, 0.18);
+  border-radius: var(--site-radius);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  min-width: 130px;
 
   a {
-    padding: 0.4rem 0;
+    padding: 0.45rem 0;
   }
 }

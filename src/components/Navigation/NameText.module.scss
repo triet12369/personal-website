@@ -2,15 +2,20 @@
 
 .text {
   @include link-styles;
-  @include hover-styles;
 
   display: flex;
   align-items: center;
-  color: inherit;
+  color: var(--mantine-color-text);
   text-align: center;
-  font-size: 1rem;
-  font-weight: 400;
-  font-family: monospace, sans-serif;
-  letter-spacing: 3px;
+  font-size: 0.85rem;
+  font-weight: 300;
+  font-family: 'Raleway', sans-serif;
+  letter-spacing: 0.38em;
   text-transform: uppercase;
+  opacity: 1;
+  transition: opacity 400ms ease;
+
+  &:hover {
+    opacity: 0.75;
+  }
 }
