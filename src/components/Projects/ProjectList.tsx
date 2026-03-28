@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useLanguage } from '../../hooks/useLanguage';
 import { Project } from '../../types';
+import { PROJECT_CLICK_HANDLERS } from './registry';
 
 import styles from './ProjectList.module.scss';
 
@@ -28,6 +29,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({ projects }) => {
             : project.frontmatter;
         const href = project.frontmatter.href ?? `/projects/${project.slug}`;
         const isExternal = !!project.frontmatter.href;
+        const clickHandler = PROJECT_CLICK_HANDLERS[project.slug];
 
         return (
           <li key={project.slug} className={styles.item}>
@@ -37,16 +39,25 @@ export const ProjectList: React.FC<ProjectListProps> = ({ projects }) => {
               </div>
             )}
             <div className={styles.content}>
-              <Link href={href} passHref>
-                <a
-                  className={styles.title}
-                  {...(isExternal
-                    ? { target: '_blank', rel: 'noopener noreferrer' }
-                    : {})}
+              {clickHandler ? (
+                <button
+                  className={styles.titleButton}
+                  onClick={() => clickHandler(project)}
                 >
                   {fm.title}
-                </a>
-              </Link>
+                </button>
+              ) : (
+                <Link href={href} passHref>
+                  <a
+                    className={styles.title}
+                    {...(isExternal
+                      ? { target: '_blank', rel: 'noopener noreferrer' }
+                      : {})}
+                  >
+                    {fm.title}
+                  </a>
+                </Link>
+              )}
               {fm.description && <p className={styles.description}>{fm.description}</p>}
               {fm.techStack && fm.techStack.length > 0 && (
                 <ul className={styles.tags}>
