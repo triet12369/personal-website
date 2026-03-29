@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 
 import { useLanguage } from '../../hooks/useLanguage';
+import { useT } from '../../hooks/useT';
 import { BlogPost } from '../../types';
 
 import styles from './PostTimeline.module.scss';
@@ -13,7 +13,7 @@ type PostTimelineProps = {
 
 export const PostTimeline: React.FC<PostTimelineProps> = ({ posts }) => {
   const { lang } = useLanguage();
-  const { t } = useTranslation();
+  const t = useT();
 
   if (posts.length === 0) {
     return <p className={styles.empty}>{t('blog.noPostsYet')}</p>;
@@ -50,10 +50,14 @@ export const PostTimeline: React.FC<PostTimelineProps> = ({ posts }) => {
                     ? { target: '_blank', rel: 'noopener noreferrer' }
                     : {})}
                 >
-                  {fm.title}
+                  {t({ en: post.frontmatter.title, vi: post.frontmatter_vi?.title ?? post.frontmatter.title })}
                 </a>
               </Link>
-              {fm.description && <p className={styles.description}>{fm.description}</p>}
+              {(post.frontmatter.description || post.frontmatter_vi?.description) && (
+                <p className={styles.description}>
+                  {t({ en: post.frontmatter.description ?? '', vi: post.frontmatter_vi?.description ?? post.frontmatter.description ?? '' })}
+                </p>
+              )}
               {fm.tags && fm.tags.length > 0 && (
                 <ul className={styles.tags}>
                   {fm.tags.map((tag) => (

@@ -4,8 +4,10 @@ import { LanguageContext } from '../providers/LanguageProvider';
 
 export type Language = 'en' | 'vi';
 
-type LanguageContextType = {
+export type LanguageContextType = {
   lang: Language;
+  pendingLang: Language;
+  isTransitioning: boolean;
   setLang: (lang: Language) => void;
 };
 

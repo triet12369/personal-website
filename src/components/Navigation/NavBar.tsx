@@ -1,9 +1,9 @@
 import { Group } from '@mantine/core';
 import Link from 'next/link';
 import React, { FC, useEffect, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 
 import { ROUTES } from '../../routes';
+import { useT } from '../../hooks/useT';
 import { ThemeSwitcher } from '../Theme/ThemeSwitcher';
 
 import { LanguageSwitcher } from './LanguageSwitcher';
@@ -16,7 +16,7 @@ type INavBarProps = {
 
 export const NavBar: FC<INavBarProps> = (props) => {
   const { isDropdown } = props;
-  const { t } = useTranslation();
+  const t = useT();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 

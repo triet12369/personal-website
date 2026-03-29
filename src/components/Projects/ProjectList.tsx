@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 
 import { useLanguage } from '../../hooks/useLanguage';
+import { useT } from '../../hooks/useT';
 import { Project } from '../../types';
 import { PROJECT_CLICK_HANDLERS } from './registry';
 
@@ -14,7 +14,7 @@ type ProjectListProps = {
 
 export const ProjectList: React.FC<ProjectListProps> = ({ projects }) => {
   const { lang } = useLanguage();
-  const { t } = useTranslation();
+  const t = useT();
 
   if (projects.length === 0) {
     return <p className={styles.empty}>{t('projects.noProjectsYet')}</p>;
@@ -44,7 +44,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({ projects }) => {
                   className={styles.titleButton}
                   onClick={() => clickHandler(project)}
                 >
-                  {fm.title}
+                  {t({ en: project.frontmatter.title, vi: project.frontmatter_vi?.title ?? project.frontmatter.title })}
                 </button>
               ) : (
                 <Link href={href} passHref>
@@ -54,11 +54,15 @@ export const ProjectList: React.FC<ProjectListProps> = ({ projects }) => {
                       ? { target: '_blank', rel: 'noopener noreferrer' }
                       : {})}
                   >
-                    {fm.title}
+                    {t({ en: project.frontmatter.title, vi: project.frontmatter_vi?.title ?? project.frontmatter.title })}
                   </a>
                 </Link>
               )}
-              {fm.description && <p className={styles.description}>{fm.description}</p>}
+              {(project.frontmatter.description || project.frontmatter_vi?.description) && (
+                <p className={styles.description}>
+                  {t({ en: project.frontmatter.description, vi: project.frontmatter_vi?.description ?? project.frontmatter.description })}
+                </p>
+              )}
               {fm.techStack && fm.techStack.length > 0 && (
                 <ul className={styles.tags}>
                   {fm.techStack.map((tech) => (

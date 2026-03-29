@@ -3,6 +3,7 @@ import { GetStaticProps } from 'next';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useT } from '../../hooks/useT';
 import { ProjectList } from '../../components/Projects/ProjectList';
 import { Layout } from '../../components/Layout/Layout';
 import { getAllProjects } from '../../lib/projects';
@@ -13,10 +14,11 @@ type ProjectsPageProps = {
 };
 
 export default function ProjectsPage({ projects }: ProjectsPageProps) {
-  const { t } = useTranslation();
+  const { t: tStr } = useTranslation();
+  const t = useT();
 
   return (
-    <Layout title={t('projects.pageTitle')}>
+    <Layout title={tStr('projects.pageTitle')}>
       <Container size="md" py="xl">
         <Title order={1} mb="xl">
           {t('projects.heading')}

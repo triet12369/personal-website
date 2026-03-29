@@ -6,8 +6,10 @@ import React from 'react';
 
 import { MDXComponents } from '../../components/Blog/MDXComponents';
 import { PROJECT_COMPONENTS } from '../../components/Projects/registry';
+import { MDX_FADE_MS } from '../../components/AnimatedText';
 import { Layout } from '../../components/Layout/Layout';
 import { useLanguage } from '../../hooks/useLanguage';
+import { useT } from '../../hooks/useT';
 import { getAllProjects, getProjectBySlug } from '../../lib/projects';
 import { ProjectFrontmatter } from '../../types';
 
@@ -26,7 +28,8 @@ export default function ProjectPage({
   mdxSource_vi,
   slug,
 }: ProjectPageProps) {
-  const { lang } = useLanguage();
+  const { lang, isTransitioning } = useLanguage();
+  const t = useT();
 
   const showVi = lang === 'vi';
   const hasVi = !!mdxSource_vi;
@@ -37,7 +40,7 @@ export default function ProjectPage({
     <Layout title={activeFm.title} blurBackground>
       <Container size="md" py="xl">
         <Title order={1} mb="xs">
-          {activeFm.title}
+          {t({ en: frontmatter.title, vi: frontmatter_vi?.title ?? frontmatter.title })}
         </Title>
         {showVi && !hasVi && (
           <p
@@ -54,7 +57,7 @@ export default function ProjectPage({
             bên dưới.
           </p>
         )}
-        <div style={{ marginTop: '2rem' }}>
+        <div style={{ marginTop: '2rem', transition: `opacity ${MDX_FADE_MS}ms ease`, opacity: isTransitioning ? 0 : 1 }}>
           <MDXRemote
             {...activeMdx}
             components={{ ...MDXComponents, ...PROJECT_COMPONENTS[slug] }}

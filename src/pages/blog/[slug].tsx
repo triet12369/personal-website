@@ -8,8 +8,10 @@ import React from 'react';
 
 import { MDXComponents } from '../../components/Blog/MDXComponents';
 import { POST_COMPONENTS } from '../../components/Blog/registry';
+import { AnimatedSpan, MDX_FADE_MS } from '../../components/AnimatedText';
 import { Layout } from '../../components/Layout/Layout';
 import { useLanguage } from '../../hooks/useLanguage';
+import { useT } from '../../hooks/useT';
 import { getAllPosts, getPostBySlug } from '../../lib/blog';
 import { resolveContentImage } from '../../lib/resolveContentImage';
 import { BlogPostFrontmatter } from '../../types';
@@ -32,7 +34,8 @@ export default function BlogPostPage({
   mdxSource_vi,
   slug,
 }: BlogPostPageProps) {
-  const { lang } = useLanguage();
+  const { lang, isTransitioning } = useLanguage();
+  const t = useT();
 
   const showVi = lang === 'vi';
   const hasVi = !!mdxSource_vi;
@@ -44,7 +47,7 @@ export default function BlogPostPage({
     <Layout title={activeFm.title} blurBackground>
       <Container size="md" py="xl">
         <Title order={1} mb="xs">
-          {activeFm.title}
+          {t({ en: frontmatter.title, vi: frontmatter_vi?.title ?? frontmatter.title })}
         </Title>
         <time
           dateTime={activeFm.date}
@@ -79,7 +82,7 @@ export default function BlogPostPage({
             bên dưới.
           </p>
         )}
-        <div style={{ marginTop: '2rem' }}>
+        <div style={{ marginTop: '2rem', transition: `opacity ${MDX_FADE_MS}ms ease`, opacity: isTransitioning ? 0 : 1 }}>
           <MDXRemote
             {...activeMdx}
             components={{ ...MDXComponents, ...POST_COMPONENTS[slug] }}
