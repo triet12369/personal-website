@@ -37,12 +37,11 @@ export const StarBackground: React.FC = () => {
     setWebgl(supported);
   }, []);
 
-  // Only generate nebula textures when the WebGL renderer will be used.
-  // Canvas 2D path skips texture generation entirely.
-  const { dark: nebulaDark, light: nebulaLight } = useNebulaTexture(webgl === true);
+  // Load nebula textures for both renderers.
+  const { dark: nebulaDark, light: nebulaLight } = useNebulaTexture(webgl !== null);
 
   if (webgl === null) return null;
   return webgl
     ? <StarBackgroundWebGL nebulaDark={nebulaDark} nebulaLight={nebulaLight} />
-    : <StarBackgroundCanvas />;
+    : <StarBackgroundCanvas nebulaDark={nebulaDark} nebulaLight={nebulaLight} />;
 };

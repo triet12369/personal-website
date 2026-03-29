@@ -9,17 +9,25 @@ import {
   EXPLOSION_RING_EXPAND, EXPLOSION_RING_FADE,
   EXPLOSION_PARTICLE_DRAG, EXPLOSION_PARTICLE_GRAVITY,
   DEBUG_FRAMETIME,
+  NEBULA_ENABLED, NEBULA_OPACITY, NEBULA_OPACITY_LIGHT,
+  NEBULA_WEIGHT_HYDROGEN, NEBULA_WEIGHT_SO_HI, NEBULA_WEIGHT_SO_LO,
 } from './config';
 import { DARK_PALETTE, LIGHT_PALETTE } from './palettes';
 import { makeStars, spawnExplosion, spawnShootingStar, drawFrameHUD, HUD_SAMPLES } from './helpers';
-import type { Palette, Star, ShootingStar, Explosion } from './types';
+import type { NebulaProps, Palette, Star, ShootingStar, Explosion } from './types';
 
-export const StarBackgroundCanvas: React.FC = () => {
+export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebulaDark, nebulaLight }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef    = useRef<number>(0);
   const colorScheme    = useComputedColorScheme('dark', { getInitialValueInEffect: true });
   const paletteRef     = useRef<Palette>(DARK_PALETTE);
   const colorSchemeRef = useRef(colorScheme);
+  const nebulaRef      = useRef<NebulaProps>({ nebulaDark, nebulaLight });
+
+  // Keep nebula bitmaps accessible inside the RAF loop without restarting it
+  useEffect(() => {
+    nebulaRef.current = { nebulaDark, nebulaLight };
+  }, [nebulaDark, nebulaLight]);
 
   // Swap palette immediately without restarting the animation loop
   useEffect(() => {
@@ -44,11 +52,19 @@ export const StarBackgroundCanvas: React.FC = () => {
     const explosions:    Explosion[]    = [];
     let spawnTimer = 0;
 
+    // Offscreen canvas for nebula — layers are composited here with 'lighter',
+    // then the combined result is drawn at normalised opacity so the total
+    // intensity matches the WebGL shader's MAX-alpha approach.
+    const nebulaCanvas = document.createElement('canvas');
+    let nebCtx = nebulaCanvas.getContext('2d')!;
+
     function resize() {
       w = el.offsetWidth;
       h = el.offsetHeight;
       el.width  = w;
       el.height = h;
+      nebulaCanvas.width  = w;
+      nebulaCanvas.height = h;
       stars = makeStars(STAR_COUNT, w, h, paletteRef.current.maxStarAlpha);
     }
 
@@ -60,6 +76,17 @@ export const StarBackgroundCanvas: React.FC = () => {
 
     resize();
     window.addEventListener('resize', onResize);
+
+    // Randomise S II / O III prominence once per page load (mirrors WebGL)
+    const soFlip      = Math.random() < 0.5;
+    const nebulaWeights = [
+      soFlip ? NEBULA_WEIGHT_SO_LO : NEBULA_WEIGHT_SO_HI,
+      NEBULA_WEIGHT_HYDROGEN,
+      soFlip ? NEBULA_WEIGHT_SO_HI : NEBULA_WEIGHT_SO_LO,
+    ];
+    // Normalise: divide by sum-of-weights so total intensity ≈ 1× (matches
+    // the WebGL shader which uses MAX-alpha rather than summed alpha).
+    const nebulaWeightSum = nebulaWeights.reduce((s, v) => s + v, 0);
 
     const frameTimes = new Float64Array(HUD_SAMPLES);
     const wallTimes  = new Float64Array(HUD_SAMPLES);
@@ -79,6 +106,25 @@ export const StarBackgroundCanvas: React.FC = () => {
       const isDark  = colorSchemeRef.current === 'dark';
 
       c.clearRect(0, 0, w, h);
+
+      // ── Nebula layers (additive compositing, normalised) ──────────────────
+      if (NEBULA_ENABLED) {
+        const bitmaps = isDark ? nebulaRef.current.nebulaDark : nebulaRef.current.nebulaLight;
+        if (bitmaps && bitmaps.length > 0) {
+          const opacity = isDark ? NEBULA_OPACITY : NEBULA_OPACITY_LIGHT;
+          // Blend layers additively into the offscreen buffer
+          nebCtx.clearRect(0, 0, w, h);
+          nebCtx.globalCompositeOperation = 'lighter';
+          for (let i = 0; i < bitmaps.length; i++) {
+            nebCtx.globalAlpha = nebulaWeights[i] ?? 1;
+            nebCtx.drawImage(bitmaps[i], 0, 0, w, h);
+          }
+          // Draw the combined offscreen result at normalised opacity
+          c.globalAlpha = opacity / nebulaWeightSum;
+          c.drawImage(nebulaCanvas, 0, 0);
+          c.globalAlpha = 1;
+        }
+      }
 
       // ── Static stars (twinkle) ─────────────────────────────────────────────
       for (const s of stars) {
