@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import React from 'react';
 
+import { ViewCount } from '../Engagement/ViewCount';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useT } from '../../hooks/useT';
 import { Project } from '../../types';
@@ -72,6 +73,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({ projects }) => {
                   ))}
                 </ul>
               )}
+              {!isExternal && <ViewCount slug={project.slug} />}
             </div>
           </li>
         );

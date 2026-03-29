@@ -1,0 +1,14 @@
+.root {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  opacity: 0.55;
+  font-size: 0.75rem;
+  font-family: 'Raleway', sans-serif;
+  font-weight: 500;
+}
+
+.icon {
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}

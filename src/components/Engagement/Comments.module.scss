@@ -1,0 +1,136 @@
+.root {
+  margin-top: 3.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--mantine-color-default-border);
+}
+
+.heading {
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin: 0 0 1.5rem;
+  opacity: 0.7;
+}
+
+// ── Form ────────────────────────────────────────────────────────────────────
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 2.5rem;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  background: var(--mantine-color-default);
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: 0.375rem;
+  color: var(--mantine-color-text);
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: var(--mantine-color-anchor);
+  }
+
+  &::placeholder {
+    color: var(--mantine-color-dimmed);
+    opacity: 0.7;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+  }
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 6rem;
+}
+
+.error {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--mantine-color-red-6);
+}
+
+.submit {
+  align-self: flex-end;
+  padding: 0.45rem 1.2rem;
+  background: var(--mantine-color-text);
+  color: var(--mantine-color-body);
+  border: none;
+  border-radius: 0.375rem;
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  &:not(:disabled):hover {
+    opacity: 0.8;
+  }
+}
+
+// ── Comment list ─────────────────────────────────────────────────────────────
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.empty {
+  margin: 0;
+  font-size: 0.88rem;
+  font-style: italic;
+  opacity: 0.5;
+}
+
+.comment {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: 0.5rem;
+}
+
+.meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  margin-bottom: 0.45rem;
+}
+
+.author {
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.date {
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.72rem;
+  opacity: 0.55;
+}
+
+.body {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

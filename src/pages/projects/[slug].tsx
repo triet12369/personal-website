@@ -7,6 +7,9 @@ import React from 'react';
 import { MDXComponents } from '../../components/Blog/MDXComponents';
 import { PROJECT_COMPONENTS } from '../../components/Projects/registry';
 import { MDX_FADE_MS } from '../../components/AnimatedText';
+import { Comments } from '../../components/Engagement/Comments';
+import { Reactions } from '../../components/Engagement/Reactions';
+import { ViewCount } from '../../components/Engagement/ViewCount';
 import { Layout } from '../../components/Layout/Layout';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useT } from '../../hooks/useT';
@@ -42,6 +45,7 @@ export default function ProjectPage({
         <Title order={1} mb="xs">
           {t({ en: frontmatter.title, vi: frontmatter_vi?.title ?? frontmatter.title })}
         </Title>
+        <ViewCount slug={slug} increment />
         {showVi && !hasVi && (
           <p
             style={{
@@ -63,6 +67,8 @@ export default function ProjectPage({
             components={{ ...MDXComponents, ...PROJECT_COMPONENTS[slug] }}
           />
         </div>
+        <Reactions slug={slug} />
+        <Comments slug={slug} />
       </Container>
     </Layout>
   );

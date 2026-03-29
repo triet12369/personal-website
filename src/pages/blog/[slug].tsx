@@ -9,6 +9,10 @@ import React from 'react';
 import { MDXComponents } from '../../components/Blog/MDXComponents';
 import { POST_COMPONENTS } from '../../components/Blog/registry';
 import { AnimatedSpan, MDX_FADE_MS } from '../../components/AnimatedText';
+import { Comments } from '../../components/Engagement/Comments';
+import { CommentCount } from '../../components/Engagement/CommentCount';
+import { Reactions } from '../../components/Engagement/Reactions';
+import { ViewCount } from '../../components/Engagement/ViewCount';
 import { Layout } from '../../components/Layout/Layout';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useT } from '../../hooks/useT';
@@ -49,24 +53,28 @@ export default function BlogPostPage({
         <Title order={1} mb="xs">
           {t({ en: frontmatter.title, vi: frontmatter_vi?.title ?? frontmatter.title })}
         </Title>
-        <time
-          dateTime={activeFm.date}
-          style={{
-            opacity: 0.85,
-            fontSize: '0.72rem',
-            fontFamily: "'Raleway', sans-serif",
-            fontWeight: 500,
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
-          }}
-        >
-          {new Date(activeFm.date).toLocaleDateString(locale, {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            timeZone: 'UTC',
-          })}
-        </time>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--mantine-spacing-sm)' }}>
+          <time
+            dateTime={activeFm.date}
+            style={{
+              opacity: 0.85,
+              fontSize: '0.72rem',
+              fontFamily: "'Raleway', sans-serif",
+              fontWeight: 500,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+            }}
+          >
+            {new Date(activeFm.date).toLocaleDateString(locale, {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              timeZone: 'UTC',
+            })}
+          </time>
+          <ViewCount slug={slug} increment />
+          <CommentCount slug={slug} />
+        </div>
         {showVi && !hasVi && (
           <p
             style={{
@@ -88,6 +96,8 @@ export default function BlogPostPage({
             components={{ ...MDXComponents, ...POST_COMPONENTS[slug] }}
           />
         </div>
+        <Reactions slug={slug} />
+        <Comments slug={slug} />
       </Container>
     </Layout>
   );

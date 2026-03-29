@@ -32,6 +32,13 @@
   text-transform: uppercase;
 }
 
+.dateLine {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.25rem;
+}
+
 .content {
   display: flex;
   flex-direction: column;

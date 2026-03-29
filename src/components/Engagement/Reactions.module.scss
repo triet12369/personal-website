@@ -1,0 +1,41 @@
+.root {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 2.5rem;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: 2rem;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease, border-color 0.15s ease;
+  line-height: 1;
+
+  &:hover {
+    background: var(--mantine-color-default-hover);
+    border-color: var(--mantine-color-dimmed);
+    transform: scale(1.06);
+  }
+
+  &:active {
+    transform: scale(0.96);
+  }
+}
+
+.emoji {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.count {
+  font-size: 0.8rem;
+  font-family: 'Raleway', sans-serif;
+  font-weight: 600;
+  color: var(--mantine-color-dimmed);
+}

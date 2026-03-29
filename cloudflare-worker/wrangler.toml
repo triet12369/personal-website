@@ -1,0 +1,13 @@
+name            = "personal-site-api"
+main            = "src/index.ts"
+compatibility_date = "2024-09-23"
+
+# After running `wrangler d1 create personal-site-db`, replace
+# YOUR_D1_DATABASE_ID_HERE with the returned database_id.
+[[d1_databases]]
+binding       = "DB"
+database_name = "personal-site-db"
+database_id   = "482d224d-cb0a-4556-8866-e07fdfbe4b1a"
+
+# API_TOKEN is stored as a Wrangler secret — never commit the real value.
+# Set it once with:  wrangler secret put API_TOKEN

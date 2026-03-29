@@ -1,0 +1,16 @@
+{
+  "name": "personal-site-worker",
+  "private": true,
+  "scripts": {
+    "dev": "npx wrangler dev",
+    "deploy": "npx wrangler deploy",
+    "db:create": "npx wrangler d1 create personal-site-db",
+    "db:migrate": "npx wrangler d1 execute personal-site-db --file=./schema.sql",
+    "db:migrate:remote": "npx wrangler d1 execute personal-site-db --remote --file=./schema.sql"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250327.0",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.78.0"
+  }
+}

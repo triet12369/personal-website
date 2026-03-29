@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import React from 'react';
 
+import { CommentCount } from '../Engagement/CommentCount';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useT } from '../../hooks/useT';
 import { BlogPost } from '../../types';
@@ -29,14 +30,17 @@ export const PostTimeline: React.FC<PostTimelineProps> = ({ posts }) => {
 
         return (
           <li key={post.slug} className={styles.item}>
-            <time className={styles.date} dateTime={fm.date}>
-              {new Date(fm.date).toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                timeZone: 'UTC',
-              })}
-            </time>
+            <div className={styles.dateLine}>
+              <time className={styles.date} dateTime={fm.date}>
+                {new Date(fm.date).toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                  timeZone: 'UTC',
+                })}
+              </time>
+              {!isExternal && <CommentCount slug={post.slug} />}
+            </div>
             <div className={styles.content}>
               {post.imageUrl && (
                 <div className={styles.imageWrapper}>
