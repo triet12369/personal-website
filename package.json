@@ -2,12 +2,17 @@
   "name": "mantine-minimal-next-template",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "cloudflare-worker",
+    "demos/*"
+  ],
   "engines": {
     "node": ">=24.x"
   },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:demos": "npm run build --workspaces --if-present && node scripts/copy-demos.js",
     "start": "next start",
     "lint": "eslint --fix 'src/**/*.{ts,tsx}'"
   },

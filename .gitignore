@@ -32,8 +32,17 @@ yarn-error.log*
 # colocated content images (auto-copied to public at build time)
 /public/content/
 
+# demo intermediate build output (committed output lives in public/demos/)
+demos/*/dist/
+demos/*/node_modules/
+demos/*/pkg/
+demos/*/target/
+
 # vercel
 .vercel
+
+# wrangler
+.wrangler
 
 # typescript
 *.tsbuildinfo

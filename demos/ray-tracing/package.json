@@ -1,0 +1,9 @@
+{
+  "name": "demo-ray-tracing",
+  "private": true,
+  "description": "Ray tracing demo — Rust compiled to WASM via wasm-pack.",
+  "scripts": {
+    "build": "wasm-pack build --target web --out-dir pkg && node build.js"
+  },
+  "devDependencies": {}
+}

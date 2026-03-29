@@ -1,0 +1,82 @@
+---
+title: "Ray Tracing trên Trình Duyệt với Rust & WebAssembly"
+date: 2026-03-29
+description: "Xây dựng ray tracer bằng CPU trong Rust, biên dịch sang WASM, và chạy trực tiếp ngay trên trang này — không cần GPU."
+tags: [rust, wasm, graphics, ray-tracing]
+---
+
+## Demo Trực Tiếp
+
+<DemoFrame slug="ray-tracing" title="Ray Tracing WASM Demo" />
+
+Hình ảnh trên được render hoàn toàn trong trình duyệt của bạn. Không có server, không có GPU — chỉ là một binary Rust biên dịch thành WebAssembly, chạy bên trong một iframe sandbox.
+
+---
+
+## Ray tracing là gì?
+
+Ray tracing mô phỏng vật lý ánh sáng bằng cách bắn các tia từ camera ảo vào cảnh và tính toán màu sắc mỗi tia chạm vào. Với mỗi pixel:
+
+1. **Bắn** một tia chính từ camera qua pixel đó vào cảnh.
+2. **Giao điểm** với mọi vật thể (ở đây là các hình cầu) để tìm điểm gần nhất.
+3. **Tô màu** điểm chạm: ánh sáng xung quanh, khuếch tán, và phản chiếu gương từ mỗi nguồn sáng.
+4. **Bóng tối**: bắn tia phụ về phía mỗi nguồn sáng — nếu tia đó chạm vào vật gì trước, điểm đó nằm trong bóng.
+5. **Phản xạ**: đệ quy tối đa *N* lần phản xạ cho các bề mặt giống gương.
+
+Kết quả là hình ảnh vật lý thực tế với gradient mềm mại, bóng sắc nét, và phản chiếu chân thực — tính toán hoàn toàn bằng phần mềm.
+
+---
+
+## Tại sao Rust + WASM?
+
+Ray tracing đòi hỏi tính toán cực kỳ nặng. Một hình ảnh 640 × 400 với 2× SSAA và 3 lần phản xạ cần khoảng **2 triệu phép kiểm tra giao điểm tia-hình cầu** mỗi frame.
+
+JavaScript không phải công cụ phù hợp cho vòng lặp đó. Rust biên dịch sang WebAssembly thì:
+
+- **Nhanh** — WASM chạy gần bằng tốc độ native, không cần JIT warm-up.
+- **Ổn định** — không có garbage collector làm gián đoạn giữa chừng.
+- **Độc lập** — demo được đóng gói thành package riêng với `Cargo.toml` của nó; hoàn toàn không động đến `node_modules` của site.
+
+Pipeline build rất đơn giản:
+
+```
+wasm-pack build --target web   →   pkg/ray_tracing.wasm + ray_tracing.js
+node build.js                  →   copy mọi thứ vào dist/
+scripts/copy-demos.js          →   publish dist/ lên public/demos/ray-tracing/
+```
+
+Iframe trên trang này chỉ load `/demos/ray-tracing/index.html`. Sandboxed, không rò rỉ dependency.
+
+---
+
+## Cảnh demo
+
+Năm hình cầu, hai nguồn sáng điểm, suy giảm bình phương nghịch đảo, đổ bóng Phong, tối đa 3 lần phản xạ, và hiệu chỉnh gamma 2.2:
+
+```rust
+#[wasm_bindgen]
+pub fn render(width: u32, height: u32) -> Vec<u8> {
+    // ...dựng cảnh, bắn tia, trả về bytes RGBA
+}
+```
+
+Phía JavaScript cũng cực kỳ gọn:
+
+```js
+import init, { render } from './pkg/ray_tracing.js';
+
+await init();
+const pixels = render(640, 400);
+const imageData = new ImageData(new Uint8ClampedArray(pixels), 640, 400);
+ctx.putImageData(imageData, 0, 0);
+```
+
+Đó là toàn bộ phần tích hợp. WASM trả về `Vec<u8>` (được expose như `Uint8Array`), và Canvas 2D API vẽ nó trong một lần gọi duy nhất.
+
+---
+
+## Tiếp theo là gì?
+
+Bước tiếp theo rõ ràng nhất là **path tracing** — thay thế bóng cứng và điểm sáng Phong bằng lấy mẫu Monte Carlo để có bóng mềm, ambient occlusion, và global illumination. Real-time khó hơn (mỗi frame cần hàng trăm mẫu), nhưng progressive refinement (tích lũy mẫu qua nhiều frame) hoàn toàn khả thi trong WASM.
+
+Cơ sở hạ tầng demo đã sẵn sàng — mỗi thử nghiệm mới chỉ cần thư mục riêng của nó trong `demos/`.

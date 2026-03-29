@@ -1,5 +1,6 @@
 import type { MDXRemoteProps } from 'next-mdx-remote';
 
+import { DemoFrame } from '../DemoFrame/DemoFrame';
 import { FortuneCookieWidget } from '../../content/blog/hello-world/FortuneCookieWidget';
 import { WeatherWidget } from '../../content/blog/hello-world/WeatherWidget';
 
@@ -15,4 +16,5 @@ import { WeatherWidget } from '../../content/blog/hello-world/WeatherWidget';
  */
 export const POST_COMPONENTS: Record<string, MDXRemoteProps['components']> = {
   'hello-world': { WeatherWidget, FortuneCookieWidget },
+  'ray-tracing-wasm': { DemoFrame },
 };

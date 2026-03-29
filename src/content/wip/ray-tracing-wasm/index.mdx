@@ -1,0 +1,82 @@
+---
+title: "Ray Tracing in Your Browser with Rust & WebAssembly"
+date: 2026-03-29
+description: "Building a CPU ray tracer in Rust, compiling it to WASM, and running it live on this page — no GPU required."
+tags: [rust, wasm, graphics, ray-tracing]
+---
+
+## Live Demo
+
+<DemoFrame slug="ray-tracing" title="Ray Tracing WASM Demo" />
+
+The image above was rendered entirely in your browser. No server, no GPU — just a Rust binary compiled to WebAssembly, running inside a sandboxed iframe.
+
+---
+
+## What is ray tracing?
+
+Ray tracing simulates the physics of light by casting rays from a virtual camera into a scene and computing what colour each ray hits. For every pixel:
+
+1. **Cast** a primary ray from the camera through that pixel into the scene.
+2. **Intersect** it against every object (here, spheres) to find the nearest hit.
+3. **Shade** the hit point: ambient, diffuse, and specular contributions from each light source.
+4. **Shadow**: cast a secondary ray toward each light — if it hits something first, the point is in shadow.
+5. **Reflect**: recurse up to *N* bounces for mirror-like surfaces.
+
+The result is a physically plausible image with soft gradients, sharp shadows, and realistic reflections, computed entirely in software.
+
+---
+
+## Why Rust + WASM?
+
+Ray tracing is embarrassingly compute-heavy. A 640 × 400 image with 2× SSAA and 3-bounce reflections requires on the order of **2 million ray–sphere intersection tests** per frame.
+
+JavaScript is not the right tool for that loop. Rust compiled to WebAssembly is:
+
+- **Fast** — WASM runs at near-native speed with no JIT warm-up penalty.
+- **Predictable** — no garbage collector pauses mid-render.
+- **Isolated** — the demo ships as a self-contained package with its own `Cargo.toml`; it doesn't touch the site's `node_modules` at all.
+
+The build pipeline is straightforward:
+
+```
+wasm-pack build --target web   →   pkg/ray_tracing.wasm + ray_tracing.js
+node build.js                  →   copies everything into dist/
+scripts/copy-demos.js          →   publishes dist/ to public/demos/ray-tracing/
+```
+
+The iframe on this page just loads `/demos/ray-tracing/index.html`. Sandboxed, zero dependency bleed.
+
+---
+
+## The scene
+
+Five spheres, two point lights, inverse-square falloff, Phong shading, up to 3 reflection bounces, and gamma 2.2 correction:
+
+```rust
+#[wasm_bindgen]
+pub fn render(width: u32, height: u32) -> Vec<u8> {
+    // ...build scene, cast rays, return RGBA bytes
+}
+```
+
+The JavaScript side is equally minimal:
+
+```js
+import init, { render } from './pkg/ray_tracing.js';
+
+await init();
+const pixels = render(640, 400);
+const imageData = new ImageData(new Uint8ClampedArray(pixels), 640, 400);
+ctx.putImageData(imageData, 0, 0);
+```
+
+That's the entire integration. WASM hands back a `Vec<u8>` (exposed as a `Uint8Array`), and the Canvas 2D API draws it in one call.
+
+---
+
+## What's next?
+
+The obvious next step is **path tracing** — replacing hard shadows and Phong highlights with Monte Carlo sampling for soft shadows, ambient occlusion, and global illumination. Real-time is harder (each frame needs hundreds of samples), but progressive refinement (accumulate samples over multiple frames) is very feasible in WASM.
+
+The demo infrastructure is already in place — each new experiment just needs its own folder under `demos/`.

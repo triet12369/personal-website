@@ -1,0 +1,192 @@
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #0d1117;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #8b949e;
+  padding: 24px 16px 48px;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  max-width: 700px;
+}
+
+.render-canvas {
+  cursor: grab;
+}
+
+.render-canvas:active {
+  cursor: grabbing;
+}
+
+/* ── Switcher ───────────────────────────────────────────────────────────── */
+
+.switcher {
+  display: flex;
+  gap: 4px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.method-btn {
+  padding: 6px 18px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: #8b949e;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.method-btn:hover:not(:disabled) {
+  background: #21262d;
+  color: #c9d1d9;
+}
+
+.method-btn.active {
+  background: #1f6feb;
+  color: #fff;
+}
+
+.method-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ── Canvas panel ───────────────────────────────────────────────────────── */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.status {
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+#canvas {
+  display: none;
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+}
+
+.render-time {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: #3fb950;
+  min-height: 1.2em;
+}
+
+/* ── Controls ───────────────────────────────────────────────────────────── */
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.control-label {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: #8b949e;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.slider {
+  width: 160px;
+  accent-color: #58a6ff;
+  cursor: pointer;
+}
+
+/* ── Stats table ────────────────────────────────────────────────────────── */
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+}
+
+.stats-table th,
+.stats-table td {
+  padding: 8px 14px;
+  text-align: right;
+  border-bottom: 1px solid #21262d;
+}
+
+.stats-table th {
+  color: #484f58;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-size: 11px;
+}
+
+.stats-table td:first-child,
+.stats-table th:first-child {
+  text-align: left;
+}
+
+.stats-table td.method-name {
+  color: #c9d1d9;
+  font-weight: 600;
+}
+
+.stats-table tr[data-method].active-row td.method-name {
+  color: #58a6ff;
+}
+
+.stats-table td.col-avg {
+  color: #3fb950;
+}
+
+.stats-table td.col-fps {
+  color: #d2a8ff;
+}
+
+.stats-table tr.row-disabled td {
+  opacity: 0.35;
+}
+
+/* ── Hint ───────────────────────────────────────────────────────────────── */
+
+.hint {
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: #484f58;
+  user-select: none;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 1;   }
+}

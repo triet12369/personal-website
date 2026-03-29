@@ -53,6 +53,17 @@ const resources = {
         failedUpdateName: 'Failed to update name',
         failedDelete: 'Failed to delete',
       },
+      demo: {
+        loading: 'Loading demo…',
+        notFound: 'Demo not available.',
+      },
+      notFound: {
+        pageTitle: '404 – Page Not Found',
+        heading: '404',
+        subheading: 'Page not found',
+        description: "The page you're looking for doesn't exist or has been moved.",
+        backHome: 'Go back home',
+      },
     },
   },
   vi: {
@@ -105,6 +116,17 @@ const resources = {
         failedPost: 'Không thể đăng bình luận',
         failedUpdateName: 'Không thể cập nhật tên',
         failedDelete: 'Không thể xóa',
+      },
+      demo: {
+        loading: 'Đang tải demo…',
+        notFound: 'Demo không khả dụng.',
+      },
+      notFound: {
+        pageTitle: '404 – Không tìm thấy trang',
+        heading: '404',
+        subheading: 'Không tìm thấy trang',
+        description: 'Trang bạn đang tìm không tồn tại hoặc đã được chuyển đi.',
+        backHome: 'Về trang chủ',
       },
     },
   },

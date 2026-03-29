@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ray Tracing — WASM vs JS vs WebGL</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- Renderer switcher -->
+    <div class="switcher" role="group" aria-label="Renderer">
+      <button class="method-btn active" data-method="wasm">Rust / WASM</button>
+      <button class="method-btn" data-method="js">Pure JS</button>
+      <button class="method-btn" data-method="webgl">WebGL</button>
+    </div>
+
+    <!-- Single canvas panel -->
+    <div class="panel">
+      <p id="status" class="status">Loading WASM&hellip;</p>
+      <canvas id="canvas" class="render-canvas"></canvas>
+      <canvas id="canvas-webgl" class="render-canvas"></canvas>
+      <p id="render-time" class="render-time"></p>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <label class="control-label" for="preview-scale">
+        Preview resolution: <span id="preview-scale-label">25%</span>
+      </label>
+      <input id="preview-scale" class="slider" type="range" min="10" max="100" value="25" step="5" />
+    </div>
+
+    <!-- Stats table -->
+    <table class="stats-table" aria-label="Average render times">
+      <thead>
+        <tr>
+          <th>Renderer</th>
+          <th>Samples</th>
+          <th>Avg time</th>
+          <th>Est. fps</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr data-method="wasm">
+          <td class="method-name">Rust / WASM</td>
+          <td class="col-samples">&mdash;</td>
+          <td class="col-avg">&mdash;</td>
+          <td class="col-fps">&mdash;</td>
+        </tr>
+        <tr data-method="js">
+          <td class="method-name">Pure JS</td>
+          <td class="col-samples">&mdash;</td>
+          <td class="col-avg">&mdash;</td>
+          <td class="col-fps">&mdash;</td>
+        </tr>
+        <tr data-method="webgl">
+          <td class="method-name">WebGL</td>
+          <td class="col-samples">&mdash;</td>
+          <td class="col-avg">&mdash;</td>
+          <td class="col-fps">&mdash;</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p id="hint" class="hint">Drag to orbit &middot; release for full render</p>
+  </div>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
