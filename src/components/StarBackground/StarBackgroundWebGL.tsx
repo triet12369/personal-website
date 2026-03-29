@@ -10,67 +10,18 @@ import {
   EXPLOSION_RING_EXPAND, EXPLOSION_RING_FADE,
   EXPLOSION_PARTICLE_DRAG, EXPLOSION_PARTICLE_GRAVITY,
   DEBUG_FRAMETIME,
+  NEBULA_ENABLED, NEBULA_OPACITY,
+  NEBULA_WEIGHT_HYDROGEN, NEBULA_WEIGHT_SO_HI, NEBULA_WEIGHT_SO_LO,
 } from './config';
 import { DARK_RGB_PALETTE, LIGHT_RGB_PALETTE } from './palettes';
 import { makeStars, spawnExplosion, spawnShootingStar, drawFrameHUD, HUD_SAMPLES } from './helpers';
-import type { RGBPalette, Star, ShootingStar, Explosion } from './types';
-
-// ─── Shaders ──────────────────────────────────────────────────────────────────
-
-/**
- * Point-sprite program — renders stars, shooting-star glow, explosion particles.
- * Vertex layout (7 floats): x, y, r, g, b, a, size
- * Fragment: soft circular alpha falloff; outputs premultiplied RGBA.
- */
-const POINT_VERT = `
-  attribute vec2  a_pos;
-  attribute vec4  a_color;
-  attribute float a_size;
-  uniform   vec2  u_res;
-  varying   vec4  v_color;
-  void main() {
-    vec2 ndc   = (a_pos / u_res) * 2.0 - 1.0;
-    gl_Position = vec4(ndc.x, -ndc.y, 0.0, 1.0);
-    gl_PointSize = a_size;
-    v_color      = a_color;
-  }
-`;
-
-const POINT_FRAG = `
-  precision mediump float;
-  varying vec4 v_color;
-  void main() {
-    float dist  = length(gl_PointCoord - vec2(0.5)) * 2.0;
-    if (dist > 1.0) discard;
-    float alpha = v_color.a * (1.0 - smoothstep(0.35, 1.0, dist));
-    gl_FragColor = vec4(v_color.rgb * alpha, alpha);
-  }
-`;
-
-/**
- * Geometry program — renders shooting-star trail quads and explosion rings.
- * Vertex layout (6 floats): x, y, r, g, b, a
- * Fragment: outputs premultiplied RGBA directly from per-vertex color.
- */
-const GEOM_VERT = `
-  attribute vec2 a_pos;
-  attribute vec4 a_color;
-  uniform   vec2 u_res;
-  varying   vec4 v_color;
-  void main() {
-    vec2 ndc    = (a_pos / u_res) * 2.0 - 1.0;
-    gl_Position = vec4(ndc.x, -ndc.y, 0.0, 1.0);
-    v_color     = a_color;
-  }
-`;
-
-const GEOM_FRAG = `
-  precision mediump float;
-  varying vec4 v_color;
-  void main() {
-    gl_FragColor = vec4(v_color.rgb * v_color.a, v_color.a);
-  }
-`;
+import type { NebulaProps, RGBPalette, Star, ShootingStar, Explosion } from './types';
+import POINT_VERT  from './shaders/point.vert';
+import POINT_FRAG  from './shaders/point.frag';
+import GEOM_VERT   from './shaders/geom.vert';
+import GEOM_FRAG   from './shaders/geom.frag';
+import NEBULA_VERT from './shaders/nebula.vert';
+import NEBULA_FRAG from './shaders/nebula.frag';
 
 // ─── GL helpers ───────────────────────────────────────────────────────────────
 
@@ -101,13 +52,19 @@ const RING_SEGS = 64;
 // Preallocate ring buffer: 2 * (RING_SEGS + 1) vertices × 6 floats
 const RING_VERT_COUNT = 2 * (RING_SEGS + 1);
 
-export const StarBackgroundWebGL: React.FC = () => {
+export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebulaDark, nebulaLight }) => {
   const canvasRef      = useRef<HTMLCanvasElement>(null);
   const overlayRef     = useRef<HTMLCanvasElement>(null);
   const rafRef         = useRef<number>(0);
   const colorScheme    = useComputedColorScheme('dark', { getInitialValueInEffect: true });
   const paletteRef     = useRef<RGBPalette>(DARK_RGB_PALETTE);
   const colorSchemeRef = useRef(colorScheme);
+
+  // Keep nebula bitmaps accessible inside the RAF loop without restarting it
+  const nebulaRef = useRef<NebulaProps>({ nebulaDark, nebulaLight });
+  useEffect(() => {
+    nebulaRef.current = { nebulaDark, nebulaLight };
+  }, [nebulaDark, nebulaLight]);
 
   // Swap palette immediately without restarting the animation loop
   useEffect(() => {
@@ -136,11 +93,15 @@ export const StarBackgroundWebGL: React.FC = () => {
     // Overlay 2D canvas for the debug HUD (null when overlayRef is not mounted)
     const overlayCtx = overlayRef.current?.getContext('2d') ?? null;
 
-    let pointProg: WebGLProgram;
-    let geomProg:  WebGLProgram;
+    let pointProg:  WebGLProgram;
+    let geomProg:   WebGLProgram;
+    let nebulaProg: WebGLProgram | null = null;
     try {
-      pointProg = createProgram(gl, POINT_VERT, POINT_FRAG);
-      geomProg  = createProgram(gl, GEOM_VERT,  GEOM_FRAG);
+      pointProg  = createProgram(gl, POINT_VERT,  POINT_FRAG);
+      geomProg   = createProgram(gl, GEOM_VERT,   GEOM_FRAG);
+      if (NEBULA_ENABLED) {
+        nebulaProg = createProgram(gl, NEBULA_VERT, NEBULA_FRAG);
+      }
     } catch {
       return;
     }
@@ -157,9 +118,40 @@ export const StarBackgroundWebGL: React.FC = () => {
       color: gl.getAttribLocation(geomProg,  'a_color'),
       res:   gl.getUniformLocation(geomProg, 'u_res')!,
     };
+    // Nebula program locations cached once (looked up every frame otherwise)
+    const nLoc = nebulaProg ? {
+      pos:     gl.getAttribLocation(nebulaProg,  'a_pos'),
+      nebula0: gl.getUniformLocation(nebulaProg, 'u_nebula0')!,
+      nebula1: gl.getUniformLocation(nebulaProg, 'u_nebula1')!,
+      nebula2: gl.getUniformLocation(nebulaProg, 'u_nebula2')!,
+      opacity: gl.getUniformLocation(nebulaProg, 'u_opacity')!,
+      w0:      gl.getUniformLocation(nebulaProg, 'u_w0')!,
+      w1:      gl.getUniformLocation(nebulaProg, 'u_w1')!,
+      w2:      gl.getUniformLocation(nebulaProg, 'u_w2')!,
+    } : null;
 
-    const ptBuf   = gl.createBuffer()!;
-    const geomBuf = gl.createBuffer()!;
+    // Randomly assign S II / O III prominence — H-α always wins.
+    // Each page load one of S/O is more prominent than the other.
+    const soFlipped = Math.random() < 0.5;
+    const nebulaW0 = soFlipped ? NEBULA_WEIGHT_SO_LO : NEBULA_WEIGHT_SO_HI;  // S II
+    const nebulaW1 = NEBULA_WEIGHT_HYDROGEN;                                  // H-α
+    const nebulaW2 = soFlipped ? NEBULA_WEIGHT_SO_HI : NEBULA_WEIGHT_SO_LO;  // O III
+
+    const ptBuf     = gl.createBuffer()!;
+    const geomBuf   = gl.createBuffer()!;
+
+    // ── Nebula fullscreen quad (static, uploaded once) ────────────────────────
+    // NDC corners: bottom-left, bottom-right, top-left, top-right (TRIANGLE_STRIP)
+    const nebulaQuadBuf = gl.createBuffer()!;
+    gl.bindBuffer(gl.ARRAY_BUFFER, nebulaQuadBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1,  1, -1,  -1, 1,  1, 1]), gl.STATIC_DRAW);
+
+    // Nebula textures: one slot per layer (null until first bitmap arrives; re-uploaded on theme switch)
+    const nebulaTex: (WebGLTexture | null)[] = [null, null, null];
+    let nebulaKind: 'dark' | 'light' | null = null;
+
+    // Guard: check max texture size so we don't exceed GPU limits
+    const maxTexSize: number = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
 
     gl.enable(gl.BLEND);
     // Premultiplied-alpha blending (canvas is premultipliedAlpha: true)
@@ -252,9 +244,57 @@ export const StarBackgroundWebGL: React.FC = () => {
 
       const palette = paletteRef.current;
       const isDark  = colorSchemeRef.current === 'dark';
+      const scheme  = isDark ? 'dark' : 'light';
 
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
+
+      // ── Nebula ─────────────────────────────────────────────────────────────
+      if (NEBULA_ENABLED && nebulaProg && nLoc) {
+        const bitmaps = isDark ? nebulaRef.current.nebulaDark : nebulaRef.current.nebulaLight;
+
+        if (bitmaps && scheme !== nebulaKind) {
+          // Lazy-upload: create / re-upload each layer texture on first use or theme switch
+          for (let i = 0; i < bitmaps.length; i++) {
+            const bmp = bitmaps[i];
+            if (bmp.width <= maxTexSize && bmp.height <= maxTexSize) {
+              if (!nebulaTex[i]) nebulaTex[i] = gl.createTexture();
+              gl.bindTexture(gl.TEXTURE_2D, nebulaTex[i]);
+              gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, bmp);
+              gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+              gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+              gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+              gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+              gl.bindTexture(gl.TEXTURE_2D, null);
+            }
+          }
+          nebulaKind = scheme;
+        }
+
+        if (nebulaTex.some(t => t !== null)) {
+          gl.useProgram(nebulaProg);
+
+          // Bind each layer to its own texture unit and sampler uniform
+          gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, nebulaTex[0]); gl.uniform1i(nLoc.nebula0, 0);
+          gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, nebulaTex[1]); gl.uniform1i(nLoc.nebula1, 1);
+          gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, nebulaTex[2]); gl.uniform1i(nLoc.nebula2, 2);
+          gl.uniform1f(nLoc.opacity, NEBULA_OPACITY);
+          gl.uniform1f(nLoc.w0, nebulaW0);
+          gl.uniform1f(nLoc.w1, nebulaW1);
+          gl.uniform1f(nLoc.w2, nebulaW2);
+
+          gl.bindBuffer(gl.ARRAY_BUFFER, nebulaQuadBuf);
+          gl.enableVertexAttribArray(nLoc.pos);
+          gl.vertexAttribPointer(nLoc.pos, 2, gl.FLOAT, false, 0, 0);
+          gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+          gl.disableVertexAttribArray(nLoc.pos);
+
+          // Unbind all 3 texture units
+          gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, null);
+          gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, null);
+          gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, null);
+        }
+      }
 
       // ── Stars ──────────────────────────────────────────────────────────────
       let sn = 0;
@@ -452,8 +492,11 @@ export const StarBackgroundWebGL: React.FC = () => {
       window.removeEventListener('resize', onResize);
       gl.deleteBuffer(ptBuf);
       gl.deleteBuffer(geomBuf);
+      gl.deleteBuffer(nebulaQuadBuf);
+      for (const t of nebulaTex) if (t) gl.deleteTexture(t);
       gl.deleteProgram(pointProg);
       gl.deleteProgram(geomProg);
+      if (nebulaProg) gl.deleteProgram(nebulaProg);
     };
   }, []);
 

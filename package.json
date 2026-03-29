@@ -14,6 +14,7 @@
     "build": "next build",
     "build:demos": "npm run build --workspaces --if-present && node scripts/copy-demos.js",
     "start": "next start",
+    "generate:nebula": "node scripts/generate-nebula.mjs",
     "lint": "eslint --fix 'src/**/*.{ts,tsx}'"
   },
   "dependencies": {

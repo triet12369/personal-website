@@ -50,6 +50,15 @@ export interface Palette {
   maxShootAlpha: number;
 }
 
+/**
+ * Nebula bitmap layers passed from the hook to the WebGL renderer.
+ * Each array holds NEBULA_LAYER_COUNT bitmaps (one per noise layer).
+ */
+export interface NebulaProps {
+  nebulaDark:  ImageBitmap[] | null;
+  nebulaLight: ImageBitmap[] | null;
+}
+
 /** WebGL palette — colors as normalized [0-1] RGB tuples. */
 export interface RGBPalette {
   starRGB:       readonly [number, number, number];
