@@ -3,8 +3,11 @@ import { createPortal } from 'react-dom';
 
 import { useMediaQuery } from '@mantine/hooks';
 
+import { useTranslation } from 'react-i18next';
+
 import { useAdminAuth } from '../../hooks/useAdminAuth';
 import { Comment, useComments } from '../../hooks/useComments';
+import { useT } from '../../hooks/useT';
 import { useUserIdentity } from '../../hooks/useUserIdentity';
 import styles from './Comments.module.scss';
 
@@ -47,7 +50,7 @@ type CommentFormProps = {
 const CommentForm: React.FC<CommentFormProps> = ({
   onSubmit,
   onCancel,
-  submitLabel = 'Post comment',
+  submitLabel = 'comments.postComment',
   defaultAuthorName,
   lockAuthorName = false,
   onAfterSubmit,
@@ -56,6 +59,8 @@ const CommentForm: React.FC<CommentFormProps> = ({
   const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const t = useT();
+  const { t: tStr } = useTranslation();
 
   // Sync when the default name changes (e.g. after an "Edit name" save).
   useEffect(() => {
@@ -72,7 +77,7 @@ const CommentForm: React.FC<CommentFormProps> = ({
       setAuthorName(defaultAuthorName ?? '');
       setBody('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to post comment');
+      setError(err instanceof Error ? err.message : tStr('comments.failedPost'));
     } finally {
       setSubmitting(false);
     }
@@ -83,7 +88,7 @@ const CommentForm: React.FC<CommentFormProps> = ({
       <input
         className={styles.input}
         type="text"
-        placeholder="Your name"
+        placeholder={tStr('comments.namePlaceholder')}
         value={authorName}
         onChange={lockAuthorName ? undefined : (e) => setAuthorName(e.target.value)}
         required
@@ -94,7 +99,7 @@ const CommentForm: React.FC<CommentFormProps> = ({
       />
       <textarea
         className={styles.textarea}
-        placeholder="Leave a comment…"
+        placeholder={tStr('comments.commentPlaceholder')}
         value={body}
         onChange={(e) => setBody(e.target.value)}
         required
@@ -106,7 +111,7 @@ const CommentForm: React.FC<CommentFormProps> = ({
       <div className={styles.formActions}>
         {onCancel && (
           <button type="button" className={styles.cancelBtn} onClick={onCancel} disabled={submitting}>
-            Cancel
+            {t('comments.cancel')}
           </button>
         )}
         <button
@@ -114,7 +119,7 @@ const CommentForm: React.FC<CommentFormProps> = ({
           type="submit"
           disabled={submitting || !authorName.trim() || !body.trim()}
         >
-          {submitting ? 'Posting…' : submitLabel}
+          {submitting ? t('comments.posting') : t(submitLabel)}
         </button>
       </div>
     </form>
@@ -138,6 +143,8 @@ const CommentAuthor: React.FC<CommentAuthorProps> = ({ comment, onUpdateName, on
   const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
   const badgeRef = useRef<HTMLSpanElement>(null);
   const [mounted, setMounted] = useState(false);
+  const t = useT();
+  const { t: tStr } = useTranslation();
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -164,7 +171,7 @@ const CommentAuthor: React.FC<CommentAuthorProps> = ({ comment, onUpdateName, on
       onSaveName(trimmed);
       setEditing(false);
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Failed to update name');
+      setSaveError(err instanceof Error ? err.message : tStr('comments.failedUpdateName'));
     } finally {
       setSaving(false);
     }
@@ -188,7 +195,7 @@ const CommentAuthor: React.FC<CommentAuthorProps> = ({ comment, onUpdateName, on
           onClick={handleSave}
           disabled={saving || !editValue.trim()}
         >
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? t('comments.saving') : t('comments.save')}
         </button>
         <button
           type="button"
@@ -196,7 +203,7 @@ const CommentAuthor: React.FC<CommentAuthorProps> = ({ comment, onUpdateName, on
           onClick={() => setEditing(false)}
           disabled={saving}
         >
-          Cancel
+          {t('comments.cancel')}
         </button>
         {saveError && <span className={styles.error}>{saveError}</span>}
       </div>
@@ -208,7 +215,7 @@ const CommentAuthor: React.FC<CommentAuthorProps> = ({ comment, onUpdateName, on
       <span className={styles.author}>{comment.display_name}</span>
 
       {comment.is_owner && (
-        <span className={styles.ownerBadge}>(Owner)</span>
+        <span className={styles.ownerBadge}>{t('comments.owner')}</span>
       )}
 
       {comment.name_history.length > 0 && !comment.is_owner && (
@@ -226,7 +233,7 @@ const CommentAuthor: React.FC<CommentAuthorProps> = ({ comment, onUpdateName, on
               className={styles.nameHistoryTooltip}
               style={{ top: tooltipPos.top, left: tooltipPos.left }}
             >
-              <span className={styles.nameHistoryTitle}>Previously known as:</span>
+              <span className={styles.nameHistoryTitle}>{t('comments.previouslyKnownAs')}</span>
               {comment.name_history.map((name, i) => (
                 <span key={i} className={styles.nameHistoryItem}>{name}</span>
               ))}
@@ -242,7 +249,7 @@ const CommentAuthor: React.FC<CommentAuthorProps> = ({ comment, onUpdateName, on
           className={styles.editNameBtn}
           onClick={() => { setEditValue(comment.display_name); setEditing(true); }}
         >
-          Edit name
+          {t('comments.editName')}
         </button>
       )}
     </div>
@@ -282,6 +289,8 @@ const CommentNodeView: React.FC<CommentNodeProps> = ({
 }) => {
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const t = useT();
+  const { t: tStr } = useTranslation();
 
   const handleReply = async (input: { author_name: string; body: string }) => {
     await onReply(node.id, { ...input, ...(userToken ? { user_token: userToken } : {}) });
@@ -293,7 +302,7 @@ const CommentNodeView: React.FC<CommentNodeProps> = ({
     try {
       await onDelete(node.id);
     } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : 'Failed to delete');
+      setDeleteError(err instanceof Error ? err.message : tStr('comments.failedDelete'));
     }
   };
 
@@ -323,16 +332,16 @@ const CommentNodeView: React.FC<CommentNodeProps> = ({
             className={styles.replyBtn}
             onClick={() => setShowReplyForm((v) => !v)}
           >
-            {showReplyForm ? 'Cancel' : 'Reply'}
+            {showReplyForm ? t('comments.cancel') : t('comments.reply')}
           </button>
           {isAdmin && (
             <button
               type="button"
               className={styles.deleteBtn}
               onClick={handleDelete}
-              aria-label="Delete comment"
+              aria-label={tStr('comments.deleteComment')}
             >
-              Delete
+              {t('comments.delete')}
             </button>
           )}
         </div>
@@ -345,7 +354,7 @@ const CommentNodeView: React.FC<CommentNodeProps> = ({
             onSubmit={handleReply}
             onAfterSubmit={onNameUsed}
             onCancel={() => setShowReplyForm(false)}
-            submitLabel="Post reply"
+            submitLabel="comments.postReply"
             defaultAuthorName={defaultAuthorName}
             lockAuthorName={lockAuthorName}
           />
@@ -393,6 +402,7 @@ export const Comments: React.FC<Props> = ({ slug }) => {
     token || undefined,
   );
   const { isAdmin, adminName } = useAdminAuth();
+  const t = useT();
 
   // Admin name takes precedence; fall back to the user's saved display name.
   const defaultAuthorName = adminName ?? savedName ?? null;
@@ -413,14 +423,14 @@ export const Comments: React.FC<Props> = ({ slug }) => {
 
   return (
     <section className={styles.root}>
-      <h2 className={styles.heading}>Comments</h2>
+      <h2 className={styles.heading}>{t('comments.heading')}</h2>
 
       <CommentForm onSubmit={handlePost} onAfterSubmit={onNameUsed} defaultAuthorName={defaultAuthorName} lockAuthorName={!!adminName} />
 
       <div className={styles.list}>
-        {loading && <p className={styles.empty}>Loading comments…</p>}
+        {loading && <p className={styles.empty}>{t('comments.loading')}</p>}
         {!loading && comments.length === 0 && (
-          <p className={styles.empty}>No comments yet. Be the first!</p>
+          <p className={styles.empty}>{t('comments.empty')}</p>
         )}
         {tree.map((node) => (
           <CommentNodeView
