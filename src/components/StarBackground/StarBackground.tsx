@@ -21,7 +21,7 @@ function detectWebGL(): boolean {
 
 // ─── Entry point ──────────────────────────────────────────────────────────────
 
-export const StarBackground: React.FC = () => {
+export const StarBackground: React.FC<{ nebulaDisabled?: boolean }> = ({ nebulaDisabled }) => {
   // null = not yet determined (SSR / pre-mount)
   const [webgl, setWebgl] = useState<boolean | null>(null);
 
@@ -37,8 +37,12 @@ export const StarBackground: React.FC = () => {
     setWebgl(supported);
   }, []);
 
-  // Load nebula textures for both renderers.
-  const { dark: nebulaDark, light: nebulaLight } = useNebulaTexture(webgl !== null);
+  // Load nebula textures for both renderers (always, so they are preloaded
+  // even on pages where nebula is disabled). Mask the output when disabled so
+  // the renderer receives null and skips drawing.
+  const { dark: nebulaDarkRaw, light: nebulaLightRaw } = useNebulaTexture(webgl !== null);
+  const nebulaDark  = nebulaDisabled ? null : nebulaDarkRaw;
+  const nebulaLight = nebulaDisabled ? null : nebulaLightRaw;
 
   if (webgl === null) return null;
   return webgl

@@ -15,15 +15,16 @@ import styles from './Layout.module.scss';
 type LayoutProps = {
   title?: string;
   blurBackground?: boolean;
+  disableNebula?: boolean;
 };
 
 export const Layout: FC<PropsWithChildren<LayoutProps>> = (props) => {
-  const { title, blurBackground } = props;
+  const { title, blurBackground, disableNebula } = props;
   // const layoutRef = useBackgroundSwipe();
 
   return (
     <main className={styles.layout}>
-      <StarBackground />
+      <StarBackground nebulaDisabled={disableNebula} />
       <Head>{title && <title>{`${TITLE_PREFIX} | ${title}`}</title>}</Head>
       <header className={styles.header}>
         <Group gap="md" align="center" justify="center">
