@@ -231,11 +231,7 @@ function spawnShootingStar(w: number, h: number, palette: Palette): ShootingStar
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-interface StarBackgroundProps {
-  blur?: boolean;
-}
-
-export const StarBackground: React.FC<StarBackgroundProps> = ({ blur = false }) => {
+export const StarBackground: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
   const colorScheme = useComputedColorScheme('dark', { getInitialValueInEffect: true });
@@ -428,5 +424,5 @@ export const StarBackground: React.FC<StarBackgroundProps> = ({ blur = false }) 
     };
   }, []);
 
-  return <canvas ref={canvasRef} className={`${styles.canvas}${blur ? ` ${styles.blurred}` : ''}`} />;
+  return <canvas ref={canvasRef} className={styles.canvas} />;
 };

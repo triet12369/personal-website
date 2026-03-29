@@ -23,7 +23,7 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = (props) => {
 
   return (
     <main className={styles.layout}>
-      <StarBackground blur={blurBackground} />
+      <StarBackground />
       <Head>{title && <title>{`${TITLE_PREFIX} | ${title}`}</title>}</Head>
       <header className={styles.header}>
         <Group gap="md" align="center" justify="center">
@@ -32,7 +32,9 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = (props) => {
         </Group>
         <NavBar isDropdown={false} />
       </header>
-      {props.children}
+      <div className={blurBackground ? styles.contentBlur : undefined}>
+        {props.children}
+      </div>
       <Footer />
     </main>
   );
