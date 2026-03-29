@@ -10,7 +10,7 @@ import {
   EXPLOSION_RING_EXPAND, EXPLOSION_RING_FADE,
   EXPLOSION_PARTICLE_DRAG, EXPLOSION_PARTICLE_GRAVITY,
   DEBUG_FRAMETIME,
-  NEBULA_ENABLED, NEBULA_OPACITY,
+  NEBULA_ENABLED, NEBULA_OPACITY, NEBULA_OPACITY_LIGHT,
   NEBULA_WEIGHT_HYDROGEN, NEBULA_WEIGHT_SO_HI, NEBULA_WEIGHT_SO_LO,
 } from './config';
 import { DARK_RGB_PALETTE, LIGHT_RGB_PALETTE } from './palettes';
@@ -278,7 +278,7 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebulaDark, nebulaL
           gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, nebulaTex[0]); gl.uniform1i(nLoc.nebula0, 0);
           gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, nebulaTex[1]); gl.uniform1i(nLoc.nebula1, 1);
           gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, nebulaTex[2]); gl.uniform1i(nLoc.nebula2, 2);
-          gl.uniform1f(nLoc.opacity, NEBULA_OPACITY);
+          gl.uniform1f(nLoc.opacity, isDark ? NEBULA_OPACITY : NEBULA_OPACITY_LIGHT);
           gl.uniform1f(nLoc.w0, nebulaW0);
           gl.uniform1f(nLoc.w1, nebulaW1);
           gl.uniform1f(nLoc.w2, nebulaW2);

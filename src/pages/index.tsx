@@ -19,7 +19,7 @@ export default function IndexPage({ recentPosts }: HomePageProps) {
   const t = useT();
 
   return (
-    <Layout title={tStr('home.pageTitle')}>
+    <Layout title={tStr('home.pageTitle')} blurBackground>
       <div style={{ height: '60vh' }}>
         <CosmosHero />
       </div>

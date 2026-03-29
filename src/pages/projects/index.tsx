@@ -18,7 +18,7 @@ export default function ProjectsPage({ projects }: ProjectsPageProps) {
   const t = useT();
 
   return (
-    <Layout title={tStr('projects.pageTitle')}>
+    <Layout title={tStr('projects.pageTitle')} blurBackground>
       <Container size="md" py="xl">
         <Title order={1} mb="xl">
           {t('projects.heading')}

@@ -18,7 +18,7 @@ export default function BlogIndexPage({ posts }: BlogIndexProps) {
   const t = useT();
 
   return (
-    <Layout title={tStr('blog.pageTitle')}>
+    <Layout title={tStr('blog.pageTitle')} blurBackground>
       <Container size="md" py="xl">
         <Title order={1} mb="xl">
           {t('blog.heading')}
