@@ -5,8 +5,9 @@
     "dev": "npx wrangler dev",
     "deploy": "npx wrangler deploy",
     "db:create": "npx wrangler d1 create personal-site-db",
-    "db:migrate": "npx wrangler d1 execute personal-site-db --file=./schema.sql",
-    "db:migrate:remote": "npx wrangler d1 execute personal-site-db --remote --file=./schema.sql"
+    "db:migrate": "npx wrangler d1 migrations apply personal-site-db",
+    "db:migrate:remote": "npx wrangler d1 migrations apply personal-site-db --remote",
+    "db:migrate:list": "npx wrangler d1 migrations list personal-site-db"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250327.0",

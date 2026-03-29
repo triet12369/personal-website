@@ -1,9 +1,5 @@
--- Canonical schema snapshot — for reference only.
--- Actual migrations live in ./migrations/ and are applied via:
---   npm run db:migrate        (local)
---   npm run db:migrate:remote (production)
---
--- D1 schema snapshot for personal-site-api
+-- Migration 0001: initial schema
+-- This is the baseline migration that creates all tables from scratch.
 
 CREATE TABLE IF NOT EXISTS views (
   slug  TEXT PRIMARY KEY,

@@ -2,6 +2,7 @@ var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
 // src/index.ts
+var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -73,9 +74,17 @@ async function handleReactions(request, env, slug) {
     if (typeof emoji !== "string" || !emoji.trim()) {
       return json({ error: "emoji required" }, 400);
     }
-    await env.DB.prepare(
-      "INSERT INTO reactions (slug, emoji, count) VALUES (?, ?, 1) ON CONFLICT (slug, emoji) DO UPDATE SET count = count + 1"
-    ).bind(slug, emoji).run();
+    const ip = request.headers.get("CF-Connecting-IP") ?? "unknown";
+    const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const ipHash = await dailyIPHash(ip);
+    const hit = await env.DB.prepare(
+      "INSERT OR IGNORE INTO reaction_hits (slug, emoji, ip_hash, date) VALUES (?, ?, ?, ?)"
+    ).bind(slug, emoji, ipHash, today).run();
+    if (hit.meta.changes > 0) {
+      await env.DB.prepare(
+        "INSERT INTO reactions (slug, emoji, count) VALUES (?, ?, 1) ON CONFLICT (slug, emoji) DO UPDATE SET count = count + 1"
+      ).bind(slug, emoji).run();
+    }
     const result = await env.DB.prepare(
       "SELECT emoji, count FROM reactions WHERE slug = ? ORDER BY count DESC"
     ).bind(slug).all();
@@ -91,10 +100,38 @@ async function handleComments(request, env, id) {
     return json({ success: true });
   }
   if (request.method === "GET") {
-    const result = await env.DB.prepare(
-      "SELECT id, author_name, body, created_at FROM comments WHERE slug = ? AND approved = 1 ORDER BY created_at DESC"
-    ).bind(id).all();
-    return json({ comments: result.results });
+    const url = new URL(request.url);
+    const rawViewer = url.searchParams.get("viewer_token");
+    const viewerToken = rawViewer && UUID_RE.test(rawViewer) ? rawViewer : null;
+    const result = await env.DB.prepare(`
+      SELECT
+        c.id,
+        c.author_name,
+        COALESCE(up.display_name, c.author_name) AS display_name,
+        c.body,
+        c.created_at,
+        c.parent_id,
+        c.is_owner,
+        CASE WHEN c.user_token IS NOT NULL AND c.user_token = ? THEN 1 ELSE 0 END AS is_mine,
+        (SELECT GROUP_CONCAT(nh.name, '|||')
+         FROM user_name_history nh WHERE nh.token = c.user_token) AS name_history_raw
+      FROM comments c
+      LEFT JOIN user_profiles up ON c.user_token = up.token
+      WHERE c.slug = ? AND c.approved = 1
+      ORDER BY c.created_at ASC
+    `).bind(viewerToken, id).all();
+    const comments = result.results.map((c) => ({
+      id: c.id,
+      author_name: c.author_name,
+      display_name: c.display_name,
+      body: c.body,
+      created_at: c.created_at,
+      parent_id: c.parent_id,
+      is_owner: c.is_owner === 1,
+      is_mine: c.is_mine === 1,
+      name_history: c.name_history_raw ? c.name_history_raw.split("|||") : []
+    }));
+    return json({ comments });
   }
   if (request.method === "POST") {
     if (!requireAuth(request, env)) return json({ error: "Unauthorized" }, 401);
@@ -106,33 +143,104 @@ async function handleComments(request, env, id) {
     }
     const authorName = typeof body.author_name === "string" ? body.author_name.trim() : "";
     const bodyText = typeof body.body === "string" ? body.body.trim() : "";
+    const parentId = typeof body.parent_id === "string" ? body.parent_id.trim() : null;
+    const rawToken = typeof body.user_token === "string" ? body.user_token.trim() : null;
+    const userToken = rawToken && UUID_RE.test(rawToken) ? rawToken : null;
+    const isOwner = body.is_owner === true ? 1 : 0;
     if (!authorName || !bodyText) {
       return json({ error: "author_name and body required" }, 400);
     }
     if (authorName.length > 80) return json({ error: "author_name too long (max 80)" }, 400);
     if (bodyText.length > 1e3) return json({ error: "body too long (max 1000)" }, 400);
+    if (userToken) {
+      const existing = await env.DB.prepare(
+        "SELECT display_name FROM user_profiles WHERE token = ?"
+      ).bind(userToken).first();
+      const now = (/* @__PURE__ */ new Date()).toISOString();
+      if (!existing) {
+        await env.DB.prepare(
+          "INSERT INTO user_profiles (token, display_name, updated_at) VALUES (?, ?, ?)"
+        ).bind(userToken, authorName, now).run();
+      } else if (existing.display_name !== authorName) {
+        await env.DB.prepare(
+          "INSERT INTO user_name_history (id, token, name, changed_at) VALUES (?, ?, ?, ?)"
+        ).bind(crypto.randomUUID(), userToken, existing.display_name, now).run();
+        await env.DB.prepare(
+          "UPDATE user_profiles SET display_name = ?, updated_at = ? WHERE token = ?"
+        ).bind(authorName, now, userToken).run();
+      }
+    }
     const commentId = crypto.randomUUID();
     const createdAt = (/* @__PURE__ */ new Date()).toISOString();
     await env.DB.prepare(
-      "INSERT INTO comments (id, slug, author_name, body, created_at, approved) VALUES (?, ?, ?, ?, ?, 1)"
-    ).bind(commentId, id, authorName, bodyText, createdAt).run();
-    return json(
-      { comment: { id: commentId, author_name: authorName, body: bodyText, created_at: createdAt } },
-      201
-    );
+      "INSERT INTO comments (id, slug, author_name, body, created_at, approved, parent_id, user_token, is_owner) VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)"
+    ).bind(commentId, id, authorName, bodyText, createdAt, parentId, userToken, isOwner).run();
+    return json({
+      comment: {
+        id: commentId,
+        author_name: authorName,
+        display_name: authorName,
+        body: bodyText,
+        created_at: createdAt,
+        parent_id: parentId,
+        is_owner: isOwner === 1,
+        is_mine: userToken !== null,
+        name_history: []
+      }
+    }, 201);
   }
   return json({ error: "Method Not Allowed" }, 405);
 }
 __name(handleComments, "handleComments");
+async function handleUsers(request, env, token, subresource) {
+  if (!UUID_RE.test(token)) return json({ error: "Invalid token" }, 400);
+  if (request.method === "GET" && subresource === "history") {
+    const result = await env.DB.prepare(
+      "SELECT name, changed_at FROM user_name_history WHERE token = ? ORDER BY changed_at DESC"
+    ).bind(token).all();
+    return json({ history: result.results });
+  }
+  if (request.method === "PUT") {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: "Invalid JSON" }, 400);
+    }
+    const displayName = typeof body.display_name === "string" ? body.display_name.trim() : "";
+    if (!displayName) return json({ error: "display_name required" }, 400);
+    if (displayName.length > 80) return json({ error: "display_name too long (max 80)" }, 400);
+    const existing = await env.DB.prepare(
+      "SELECT display_name FROM user_profiles WHERE token = ?"
+    ).bind(token).first();
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    if (!existing) {
+      await env.DB.prepare(
+        "INSERT INTO user_profiles (token, display_name, updated_at) VALUES (?, ?, ?)"
+      ).bind(token, displayName, now).run();
+    } else if (existing.display_name !== displayName) {
+      await env.DB.prepare(
+        "INSERT INTO user_name_history (id, token, name, changed_at) VALUES (?, ?, ?, ?)"
+      ).bind(crypto.randomUUID(), token, existing.display_name, now).run();
+      await env.DB.prepare(
+        "UPDATE user_profiles SET display_name = ?, updated_at = ? WHERE token = ?"
+      ).bind(displayName, now, token).run();
+    }
+    return json({ success: true, display_name: displayName });
+  }
+  return json({ error: "Method Not Allowed" }, 405);
+}
+__name(handleUsers, "handleUsers");
 var src_default = {
   async fetch(request, env) {
     const url = new URL(request.url);
     const parts = url.pathname.slice(1).split("/");
-    const [resource, id] = parts;
+    const [resource, id, subresource] = parts;
     if (!id) return json({ error: "Not Found" }, 404);
     if (resource === "views") return handleViews(request, env, id);
     if (resource === "reactions") return handleReactions(request, env, id);
     if (resource === "comments") return handleComments(request, env, id);
+    if (resource === "users") return handleUsers(request, env, id, subresource);
     return json({ error: "Not Found" }, 404);
   }
 };
@@ -178,7 +286,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-aVWx25/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-xgboAE/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -210,7 +318,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-aVWx25/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-xgboAE/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;
