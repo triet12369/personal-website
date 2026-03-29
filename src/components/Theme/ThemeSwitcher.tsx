@@ -4,7 +4,7 @@ import {
   useComputedColorScheme,
   useMantineColorScheme,
 } from '@mantine/core';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BsFillMoonStarsFill, BsSunFill } from 'react-icons/bs';
 
@@ -14,11 +14,14 @@ export const ThemeSwitcher = () => {
     getInitialValueInEffect: true,
   });
   const { t } = useTranslation();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   return (
     <Tooltip
       label={
-        computedColorScheme === 'light'
+        !mounted || computedColorScheme === 'light'
           ? t('theme.activateDark')
           : t('theme.activateLight')
       }
@@ -27,8 +30,9 @@ export const ThemeSwitcher = () => {
         onClick={() => toggleColorScheme()}
         style={{ color: 'inherit' }}
         variant="transparent"
+        suppressHydrationWarning
       >
-        {computedColorScheme === 'light' ? <BsFillMoonStarsFill /> : <BsSunFill />}
+        {!mounted || computedColorScheme === 'light' ? <BsFillMoonStarsFill /> : <BsSunFill />}
       </ActionIcon>
     </Tooltip>
   );

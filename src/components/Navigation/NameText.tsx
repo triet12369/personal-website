@@ -8,7 +8,7 @@ import styles from './NameText.module.scss';
 
 export const NameText = () => {
   return (
-    <Link href={ROUTES.HOME.href} passHref>
+    <Link href={ROUTES.HOME.href} passHref legacyBehavior>
       <a className={styles.text}>
         <FullName />
       </a>

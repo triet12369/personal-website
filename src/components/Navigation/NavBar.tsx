@@ -32,14 +32,14 @@ export const NavBar: FC<INavBarProps> = (props) => {
 
   const navLinks = (
     <>
-      <Link key={ROUTES.HOME.label} href={ROUTES.HOME.href} passHref onClick={() => setIsOpen(false)}>
-        <NavLabel isDropdown={isDropdown}>{t('nav.home')}</NavLabel>
+      <Link key={ROUTES.HOME.label} href={ROUTES.HOME.href} passHref legacyBehavior>
+        <NavLabel isDropdown={isDropdown} onClick={() => setIsOpen(false)}>{t('nav.home')}</NavLabel>
       </Link>
-      <Link key={ROUTES.BLOG.label} href={ROUTES.BLOG.href} passHref onClick={() => setIsOpen(false)}>
-        <NavLabel isDropdown={isDropdown}>{t('nav.blog')}</NavLabel>
+      <Link key={ROUTES.BLOG.label} href={ROUTES.BLOG.href} passHref legacyBehavior>
+        <NavLabel isDropdown={isDropdown} onClick={() => setIsOpen(false)}>{t('nav.blog')}</NavLabel>
       </Link>
-      <Link key={ROUTES.PROJECTS.label} href={ROUTES.PROJECTS.href} passHref onClick={() => setIsOpen(false)}>
-        <NavLabel isDropdown={isDropdown}>{t('nav.projects')}</NavLabel>
+      <Link key={ROUTES.PROJECTS.label} href={ROUTES.PROJECTS.href} passHref legacyBehavior>
+        <NavLabel isDropdown={isDropdown} onClick={() => setIsOpen(false)}>{t('nav.projects')}</NavLabel>
       </Link>
     </>
   );
