@@ -31,10 +31,9 @@ export const MoonCard: FC<Props> = ({ location, date }) => {
 
   return (
     <div className={styles.card}>
-      <div className={styles.cardTitle}>🌙 {t('observatory.moonTitle')}</div>
+      <div className={styles.cardTitle}>{t('observatory.moonTitle')}</div>
       <Stack gap="sm">
         <Group align="center" gap="md">
-          <Text className={styles.moonEmoji}>{phase.emoji}</Text>
           <Stack gap={2}>
             <Text fw={600}>{phase.name}</Text>
             <Text size="sm" c="dimmed">{illumPct}% {t('observatory.illuminated')}</Text>
@@ -59,13 +58,13 @@ export const MoonCard: FC<Props> = ({ location, date }) => {
         <Stack gap={4} mt="xs">
           <Text size="xs" c="dimmed" tt="uppercase" fw={600} style={{ letterSpacing: '0.1em' }}>{t('observatory.nextPhases')}</Text>
           {[
-            { key: 'newMoon', emoji: '🌑', label: t('observatory.newMoon'), date: next.nextNew },
-            { key: 'firstQuarter', emoji: '🌓', label: t('observatory.firstQuarter'), date: next.nextFirstQuarter },
-            { key: 'fullMoon', emoji: '🌕', label: t('observatory.fullMoon'), date: next.nextFull },
-            { key: 'thirdQuarter', emoji: '🌗', label: t('observatory.thirdQuarter'), date: next.nextThirdQuarter },
-          ].map(({ key, emoji, label, date: d }) => (
+            { key: 'newMoon', label: t('observatory.newMoon'), date: next.nextNew },
+            { key: 'firstQuarter', label: t('observatory.firstQuarter'), date: next.nextFirstQuarter },
+            { key: 'fullMoon', label: t('observatory.fullMoon'), date: next.nextFull },
+            { key: 'thirdQuarter', label: t('observatory.thirdQuarter'), date: next.nextThirdQuarter },
+          ].map(({ key, label, date: d }) => (
             <div key={key} className={styles.sunTimeRow}>
-              <span>{emoji} {label}</span>
+              <span>{label}</span>
               <span>{fmtDate(d)}</span>
             </div>
           ))}

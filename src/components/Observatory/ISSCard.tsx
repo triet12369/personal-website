@@ -94,49 +94,52 @@ export const ISSCard: FC<Props> = ({ location, date }) => {
         <img src="/images/iss_icon.png" alt="ISS" style={{ width: 16, height: 16, verticalAlign: 'middle', marginRight: 6 }} />
         {t('observatory.issTitle')}
       </div>
-      <Stack gap="md">
-        {loading && <Skeleton height={100} radius="md" />}
-        {error && <Text size="sm" c="red">{error}</Text>}
+      <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        {/* Future passes */}
+        <Stack gap="md" style={{ flex: '1 1 200px', minWidth: 0 }}>
+          {loading && <Skeleton height={100} radius="md" />}
+          {error && <Text size="sm" c="red">{error}</Text>}
 
-        {position && !loading && (
-          <span className={styles.issPosition}>
-            {t('observatory.issLat')}: {position.lat.toFixed(2)}° ·{' '}
-            {t('observatory.issLon')}: {position.lon.toFixed(2)}° ·{' '}
-            Alt: {position.alt.toFixed(0)} km
-          </span>
-        )}
+          {position && !loading && (
+            <span className={styles.issPosition}>
+              {t('observatory.issLat')}: {position.lat.toFixed(2)}° ·{' '}
+              {t('observatory.issLon')}: {position.lon.toFixed(2)}° ·{' '}
+              Alt: {position.alt.toFixed(0)} km
+            </span>
+          )}
 
-        {passes.length > 0 && (
-          <div>
-            <Text size="xs" c="dimmed" tt="uppercase" fw={600} style={{ letterSpacing: '0.1em' }} mb={6}>
-              {t('observatory.nextPasses')}
-            </Text>
-            {passes.slice(0, 3).map((p, i) => (
-              <div key={i} className={styles.passCard}>
-                <Group justify="space-between" align="flex-start">
-                  <div>
-                    <div className={styles.passTime}>{fmt(p.start)}</div>
-                    <Text size="xs" c="dimmed">
-                      {p.start.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
-                    </Text>
-                  </div>
-                  <Badge color="cyan" variant="light">
-                    Max {p.maxElevation.toFixed(0)}°
-                  </Badge>
-                </Group>
-                <Text size="xs" c="dimmed" mt={4}>
-                  {fmtDuration(p.duration)} · {azimuthToDirection(p.startAzimuth)} → {azimuthToDirection(p.endAzimuth)}
-                </Text>
-              </div>
-            ))}
-            {passes.length === 0 && (
-              <Text size="sm" c="dimmed">{t('observatory.noPassesSoon')}</Text>
-            )}
-          </div>
-        )}
+          {passes.length > 0 && (
+            <div>
+              <Text size="xs" c="dimmed" tt="uppercase" fw={600} style={{ letterSpacing: '0.1em' }} mb={6}>
+                {t('observatory.nextPasses')}
+              </Text>
+              {passes.slice(0, 3).map((p, i) => (
+                <div key={i} className={styles.passCard}>
+                  <Group justify="space-between" align="flex-start">
+                    <div>
+                      <div className={styles.passTime}>{fmt(p.start)}</div>
+                      <Text size="xs" c="dimmed">
+                        {p.start.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </Text>
+                    </div>
+                    <Badge color="cyan" variant="light">
+                      Max {p.maxElevation.toFixed(0)}°
+                    </Badge>
+                  </Group>
+                  <Text size="xs" c="dimmed" mt={4}>
+                    {fmtDuration(p.duration)} · {azimuthToDirection(p.startAzimuth)} → {azimuthToDirection(p.endAzimuth)}
+                  </Text>
+                </div>
+              ))}
+              {passes.length === 0 && (
+                <Text size="sm" c="dimmed">{t('observatory.noPassesSoon')}</Text>
+              )}
+            </div>
+          )}
+        </Stack>
 
-        {/* Map / Globe toggle */}
-        <div>
+        {/* Visualization */}
+        <div style={{ flex: '2 1 360px', minWidth: 0 }}>
           <SegmentedControl
             className={styles.mapToggle}
             value={view}
@@ -165,7 +168,7 @@ export const ISSCard: FC<Props> = ({ location, date }) => {
             )}
           </div>
         </div>
-      </Stack>
+      </div>
     </div>
   );
 };

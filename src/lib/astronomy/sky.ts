@@ -98,6 +98,40 @@ export const CONSTELLATIONS: Constellation[] = [
 export type StarWithAltAz = Star & { altAz: AltAz };
 export type ConstellationWithAltAz = Constellation & { altAz: AltAz; visible: boolean };
 
+export type Nebula = {
+  name: string;      // common name
+  id: string;        // Messier / NGC designation
+  ra: number;        // J2000 degrees
+  dec: number;       // J2000 degrees
+  type: 'galaxy' | 'nebula' | 'cluster';
+};
+
+export type NebulaWithAltAz = Nebula & { altAz: AltAz };
+
+/** Curated catalog of prominent deep-sky objects */
+export const NEBULAE: Nebula[] = [
+  { name: 'Andromeda Galaxy',   id: 'M31',      ra: 10.685,  dec: 41.269,  type: 'galaxy'  },
+  { name: 'Triangulum Galaxy',  id: 'M33',      ra: 23.462,  dec: 30.660,  type: 'galaxy'  },
+  { name: 'Pleiades',           id: 'M45',      ra: 56.750,  dec: 24.117,  type: 'cluster' },
+  { name: 'Double Cluster',     id: 'NGC 869',  ra: 34.750,  dec: 57.133,  type: 'cluster' },
+  { name: 'Orion Nebula',       id: 'M42',      ra: 83.822,  dec: -5.391,  type: 'nebula'  },
+  { name: 'Crab Nebula',        id: 'M1',       ra: 83.633,  dec: 22.015,  type: 'nebula'  },
+  { name: 'Beehive Cluster',    id: 'M44',      ra: 130.025, dec: 19.667,  type: 'cluster' },
+  { name: 'Bode\'s Galaxy',     id: 'M81',      ra: 148.888, dec: 69.065,  type: 'galaxy'  },
+  { name: 'Whirlpool Galaxy',   id: 'M51',      ra: 202.469, dec: 47.195,  type: 'galaxy'  },
+  { name: 'Omega Centauri',     id: 'NGC 5139', ra: 201.697, dec: -47.479, type: 'cluster' },
+  { name: 'Sombrero Galaxy',    id: 'M104',     ra: 190.000, dec: -11.623, type: 'galaxy'  },
+  { name: 'Owl Nebula',         id: 'M97',      ra: 168.699, dec: 55.019,  type: 'nebula'  },
+  { name: 'Hercules Cluster',   id: 'M13',      ra: 250.423, dec: 36.461,  type: 'cluster' },
+  { name: 'Eagle Nebula',       id: 'M16',      ra: 274.700, dec: -13.783, type: 'nebula'  },
+  { name: 'Omega Nebula',       id: 'M17',      ra: 275.196, dec: -16.177, type: 'nebula'  },
+  { name: 'Lagoon Nebula',      id: 'M8',       ra: 270.921, dec: -24.388, type: 'nebula'  },
+  { name: 'Trifid Nebula',      id: 'M20',      ra: 270.597, dec: -23.033, type: 'nebula'  },
+  { name: 'Ring Nebula',        id: 'M57',      ra: 283.396, dec: 33.029,  type: 'nebula'  },
+  { name: 'Dumbbell Nebula',    id: 'M27',      ra: 299.901, dec: 22.721,  type: 'nebula'  },
+  { name: 'Carina Nebula',      id: 'NGC 3372', ra: 160.983, dec: -59.867, type: 'nebula'  },
+];
+
 /** Stars currently above HORIZON_MIN degrees */
 const HORIZON_MIN = 5;
 
@@ -121,5 +155,14 @@ export function getVisibleConstellations(latDeg: number, lonDeg: number, date: D
       const altAz = raDecToAltAz(c.ra, c.dec, latDeg, lonDeg, jd);
       return { ...c, altAz, visible: altAz.alt > HORIZON_MIN };
     })
+    .sort((a, b) => b.altAz.alt - a.altAz.alt);
+}
+
+/** Returns deep-sky objects above the horizon, sorted by altitude */
+export function getVisibleNebulae(latDeg: number, lonDeg: number, date: Date): NebulaWithAltAz[] {
+  const jd = dateToJD(date);
+  return NEBULAE
+    .map((n) => ({ ...n, altAz: raDecToAltAz(n.ra, n.dec, latDeg, lonDeg, jd) }))
+    .filter((n) => n.altAz.alt > HORIZON_MIN)
     .sort((a, b) => b.altAz.alt - a.altAz.alt);
 }

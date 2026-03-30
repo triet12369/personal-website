@@ -79,7 +79,7 @@ export const LocationSelector: FC<Props> = ({ location, onLocationChange }) => {
 
   return (
     <>
-      <Button variant="outline" size="sm" onClick={open} leftSection={<span>📍</span>}>
+      <Button variant="outline" size="sm" onClick={open}>
         {location
           ? `${location.lat.toFixed(2)}°, ${location.lon.toFixed(2)}°`
           : t('observatory.setLocation')}
@@ -90,7 +90,6 @@ export const LocationSelector: FC<Props> = ({ location, onLocationChange }) => {
           <Button
             onClick={detect}
             loading={detecting}
-            leftSection={<span>🎯</span>}
             variant="light"
             fullWidth
           >

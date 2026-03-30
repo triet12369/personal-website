@@ -18,7 +18,7 @@ export const WeatherCard: FC<Props> = ({ location }) => {
 
   return (
     <div className={styles.card}>
-      <div className={styles.cardTitle} style={{ marginBottom: '0.5rem' }}>☁️ {t('observatory.weatherTitle')}</div>
+      <div className={styles.cardTitle} style={{ marginBottom: '0.5rem' }}>{t('observatory.weatherTitle')}</div>
       <a href={forecastUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
         <img
           src={imageUrl}

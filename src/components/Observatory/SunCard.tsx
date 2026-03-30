@@ -41,7 +41,7 @@ export const SunCard: FC<Props> = ({ location, date }) => {
 
   return (
     <div className={styles.card}>
-      <div className={styles.cardTitle}>☀️ {t('observatory.sunTitle')}</div>
+      <div className={styles.cardTitle}>{t('observatory.sunTitle')}</div>
       <Stack gap="xs">
         <Text size="sm">
           <span className={styles.skyStateDot} data-state={state} />

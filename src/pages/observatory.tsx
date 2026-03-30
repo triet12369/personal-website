@@ -1,4 +1,4 @@
-import { Container, SimpleGrid, Stack, Text, Title } from '@mantine/core';
+import { Container, Stack, Text, Title } from '@mantine/core';
 import { GetStaticProps } from 'next';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +13,8 @@ import { PlanetsCard } from '../components/Observatory/PlanetsCard';
 import { NightSkyCard } from '../components/Observatory/NightSkyCard';
 import { ISSCard } from '../components/Observatory/ISSCard';
 import { WeatherCard } from '../components/Observatory/WeatherCard';
+import { EarthCard } from '../components/Observatory/EarthCard';
+import obsStyles from '../components/Observatory/Observatory.module.scss';
 
 export default function ObservatoryPage() {
   const { t: tStr } = useTranslation();
@@ -49,7 +51,7 @@ export default function ObservatoryPage() {
               <LocationSelector location={location} onLocationChange={handleLocationChange} />
             </Stack>
             {location && (
-              <div style={{ flex: '1 1 340px', minWidth: 0, maxWidth: 560 }}>
+              <div style={{ flex: '1 1 400px', minWidth: 0 }}>
                 <WeatherCard location={location} />
               </div>
             )}
@@ -61,18 +63,35 @@ export default function ObservatoryPage() {
             </Text>
           )}
 
+          {/* Earth · Sun · Moon */}
           {location && (
-            <SimpleGrid
-              cols={{ base: 1, sm: 2, lg: 3 }}
-              spacing="md"
-            >
-              <SunCard location={location} date={date} />
-              <MoonCard location={location} date={date} />
-              <PlanetsCard location={location} date={date} />
-              <NightSkyCard location={location} date={date} />
-              <ISSCard location={location} date={date} />
-            </SimpleGrid>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'stretch' }}>
+              <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                <EarthCard location={location} date={date} />
+              </div>
+              <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                <SunCard location={location} date={date} />
+              </div>
+              <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                <MoonCard location={location} date={date} />
+              </div>
+            </div>
           )}
+
+          {/* Planets · Night Sky */}
+          {location && (
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'stretch' }}>
+              <div style={{ flex: '1 1 300px', minWidth: 0 }}>
+                <PlanetsCard location={location} date={date} />
+              </div>
+              <div style={{ flex: '1 1 300px', minWidth: 0 }}>
+                <NightSkyCard location={location} date={date} />
+              </div>
+            </div>
+          )}
+
+          {/* ISS */}
+          {location && <ISSCard location={location} date={date} />}
         </Stack>
       </Container>
     </Layout>

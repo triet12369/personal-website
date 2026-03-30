@@ -5,18 +5,12 @@ import { getVisiblePlanets, PlanetInfo } from '../../lib/astronomy/planets';
 import { useT } from '../../hooks/useT';
 import type { Location } from './LocationSelector';
 import styles from './Observatory.module.scss';
+import layoutStyles from '../Layout/Layout.module.scss';
+import clsx from 'clsx';
 
 type Props = {
   location: Location;
   date: Date;
-};
-
-const PLANET_EMOJI: Record<string, string> = {
-  Mercury: '☿',
-  Venus: '♀',
-  Mars: '♂',
-  Jupiter: '♃',
-  Saturn: '♄',
 };
 
 function fmt(d: Date | null): string {
@@ -24,21 +18,29 @@ function fmt(d: Date | null): string {
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
+const PLANET_SYMBOL: Record<string, string> = {
+  Mercury: '☿',
+  Venus: '♀',
+  Mars: '♂',
+  Jupiter: '♃',
+  Saturn: '♄',
+};
+
 export const PlanetsCard: FC<Props> = ({ location, date }) => {
   const t = useT();
   const planets = getVisiblePlanets(location.lat, location.lon, date);
 
   return (
     <div className={styles.card}>
-      <div className={styles.cardTitle}>🪐 {t('observatory.planetsTitle')}</div>
+      <div className={styles.cardTitle}>{t('observatory.planetsTitle')}</div>
       <Stack gap={0}>
         {planets.map((p: PlanetInfo) => (
           <div
             key={p.name}
-            className={`${styles.planetRow} ${p.altAz.alt <= 0 ? styles.belowHorizon : ''}`}
+            className={`${clsx(styles.planetRow, layoutStyles.contentBlur)} ${p.altAz.alt <= 0 ? styles.belowHorizon : ''}`}
           >
             <span className={styles.planetName}>
-              {PLANET_EMOJI[p.name]} {p.name}
+              {PLANET_SYMBOL[p.name]} {p.name}
             </span>
             <span style={{ fontSize: '0.78rem' }}>
               {p.altAz.alt.toFixed(1)}° / {p.altAz.az.toFixed(1)}°
