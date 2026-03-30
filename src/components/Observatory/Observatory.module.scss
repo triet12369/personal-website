@@ -1,0 +1,162 @@
+.card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--mantine-color-text);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.cardTitle {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+  opacity: 1;
+  margin-bottom: 0.75rem;
+}
+
+.locationBar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.clockDisplay {
+  font-family: 'Courier New', monospace;
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+
+.dateDisplay {
+  opacity: 0.6;
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+}
+
+.skyStateDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.skyStateDot[data-state='dark'] { background: #7c3aed; }
+.skyStateDot[data-state='twilight'] { background: #f97316; }
+.skyStateDot[data-state='day'] { background: #facc15; }
+
+.moonEmoji {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.planetRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.88rem;
+}
+
+.planetRow:last-child { border-bottom: none; }
+
+.planetName { font-weight: 600; min-width: 80px; }
+
+.belowHorizon { opacity: 0.35; }
+
+.starGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.starItem {
+  font-size: 0.82rem;
+  padding: 0.3rem 0.5rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+}
+
+.constellationList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.constBadge {
+  font-size: 0.78rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background: rgba(124, 58, 237, 0.2);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+}
+
+.mapToggle {
+  margin-bottom: 0.75rem;
+}
+
+.mapContainer {
+  height: 320px;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+.passCard {
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  font-size: 0.88rem;
+}
+
+.passTime {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.issPosition {
+  font-size: 0.82rem;
+  opacity: 0.7;
+  margin-top: 0.25rem;
+}
+
+.qualityBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.cloudBar {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  margin-top: 0.5rem;
+  overflow: hidden;
+}
+
+.cloudBarFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.sunTimeRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.3rem 0;
+  font-size: 0.88rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.sunTimeRow:last-child { border-bottom: none; }

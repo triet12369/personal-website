@@ -48,7 +48,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({ projects }) => {
                   {t({ en: project.frontmatter.title, vi: project.frontmatter_vi?.title ?? project.frontmatter.title })}
                 </button>
               ) : (
-                <Link href={href} passHref>
+                <Link href={href} passHref legacyBehavior>
                   <a
                     className={styles.title}
                     {...(isExternal

@@ -41,6 +41,9 @@ export const NavBar: FC<INavBarProps> = (props) => {
       <Link key={ROUTES.PROJECTS.label} href={ROUTES.PROJECTS.href} passHref legacyBehavior>
         <NavLabel isDropdown={isDropdown} onClick={() => setIsOpen(false)}>{t('nav.projects')}</NavLabel>
       </Link>
+      <Link key={ROUTES.OBSERVATORY.label} href={ROUTES.OBSERVATORY.href} passHref legacyBehavior>
+        <NavLabel isDropdown={isDropdown} onClick={() => setIsOpen(false)}>{t('nav.observatory')}</NavLabel>
+      </Link>
     </>
   );
 

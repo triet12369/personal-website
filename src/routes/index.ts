@@ -25,4 +25,10 @@ export const ROUTES = {
       pathname: '/projects',
     },
   }),
+  OBSERVATORY: cs({
+    label: 'Observatory',
+    href: {
+      pathname: '/observatory',
+    },
+  }),
 } as const;

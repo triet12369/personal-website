@@ -47,7 +47,7 @@ export const PostTimeline: React.FC<PostTimelineProps> = ({ posts }) => {
                   <img src={post.imageUrl} alt={fm.title} className={styles.image} />
                 </div>
               )}
-              <Link href={href} passHref>
+              <Link href={href} passHref legacyBehavior>
                 <a
                   className={styles.title}
                   {...(isExternal
