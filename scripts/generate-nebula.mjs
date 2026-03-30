@@ -24,7 +24,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const NEBULA_BAKED_COUNT  = 6;    // number of variants to bake
+const NEBULA_BAKED_COUNT  = 12;    // number of variants to bake
 const NEBULA_LAYER_COUNT  = 3;    // independent noise layers packed into R/G/B channels
 const NEBULA_BAKED_WIDTH  = 1920; // bake resolution (stretched to fit screen at runtime)
 const NEBULA_BAKED_HEIGHT = 1080;
