@@ -290,7 +290,7 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
       c.globalCompositeOperation = 'source-over';
 
       // ── Spawn shooting stars ───────────────────────────────────────────────
-      spawnTimer++;
+      spawnTimer += dt;
       if (spawnTimer >= SHOOT_SPAWN_INTERVAL && shootingStars.length < SHOOT_MAX_COUNT) {
         if (Math.random() < SHOOT_SPAWN_CHANCE) {
           shootingStars.push(spawnShootingStar(w, h, palette.maxShootAlpha));
@@ -303,7 +303,7 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
         const ss = shootingStars[i];
 
         if (ss.state === 'in') {
-          ss.alpha += SHOOT_FADE_IN;
+          ss.alpha += SHOOT_FADE_IN * dt;
           if (ss.alpha >= ss.maxAlpha) {
             ss.alpha = ss.maxAlpha;
             ss.state = 'hold';
@@ -313,7 +313,7 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
             ss.state = 'out';
           }
         } else {
-          ss.alpha -= SHOOT_FADE_OUT;
+          ss.alpha -= SHOOT_FADE_OUT * dt;
         }
 
         // Trigger explosion when the star first crosses the canvas edge
@@ -327,8 +327,9 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
           continue;
         }
 
-        const tailX = ss.x - ss.vx * (ss.trailLength / 14);
-        const tailY = ss.y - ss.vy * (ss.trailLength / 14);
+        const trailSecs = ss.trailLength / (Math.hypot(ss.vx, ss.vy) || 1);
+        const tailX = ss.x - ss.vx * trailSecs;
+        const tailY = ss.y - ss.vy * trailSecs;
 
         const grad = c.createLinearGradient(tailX, tailY, ss.x, ss.y);
         grad.addColorStop(0,   palette.shootTail(0));
@@ -351,8 +352,8 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
         c.fillStyle = glow;
         c.fill();
 
-        ss.x += ss.vx;
-        ss.y += ss.vy;
+        ss.x += ss.vx * dt;
+        ss.y += ss.vy * dt;
       }
 
       // ── Draw explosions ────────────────────────────────────────────────────
@@ -361,8 +362,8 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
 
         // Expanding shockwave ring
         if (exp.ringAlpha > 0) {
-          exp.ring     += EXPLOSION_RING_EXPAND;
-          exp.ringAlpha -= EXPLOSION_RING_FADE;
+          exp.ring     += EXPLOSION_RING_EXPAND * dt;
+          exp.ringAlpha -= EXPLOSION_RING_FADE * dt;
           c.beginPath();
           c.arc(exp.x, exp.y, exp.ring, 0, Math.PI * 2);
           c.strokeStyle = isDark
@@ -375,13 +376,14 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
         // Particles
         for (let j = exp.particles.length - 1; j >= 0; j--) {
           const p = exp.particles[j];
-          p.alpha -= p.decay;
+          p.alpha -= p.decay * dt;
           if (p.alpha <= 0) { exp.particles.splice(j, 1); continue; }
-          p.vx *= EXPLOSION_PARTICLE_DRAG;
-          p.vy *= EXPLOSION_PARTICLE_DRAG;
-          p.vy += EXPLOSION_PARTICLE_GRAVITY;
-          p.x  += p.vx;
-          p.y  += p.vy;
+          const drag = Math.pow(EXPLOSION_PARTICLE_DRAG, dt);
+          p.vx *= drag;
+          p.vy *= drag;
+          p.vy += EXPLOSION_PARTICLE_GRAVITY * dt;
+          p.x  += p.vx * dt;
+          p.y  += p.vy * dt;
           c.beginPath();
           c.arc(p.x, p.y, p.r, 0, Math.PI * 2);
           c.fillStyle = `rgba(${p.color[0]},${p.color[1]},${p.color[2]},${p.alpha})`;

@@ -391,7 +391,7 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
       // ── Spawn shooting stars ───────────────────────────────────────────────
-      spawnTimer++;
+      spawnTimer += dt;
       if (spawnTimer >= SHOOT_SPAWN_INTERVAL && shootingStars.length < SHOOT_MAX_COUNT) {
         if (Math.random() < SHOOT_SPAWN_CHANCE) {
           shootingStars.push(spawnShootingStar(w, h, palette.maxShootAlpha));
@@ -407,12 +407,12 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
         const ss = shootingStars[i];
 
         if (ss.state === 'in') {
-          ss.alpha += SHOOT_FADE_IN;
+          ss.alpha += SHOOT_FADE_IN * dt;
           if (ss.alpha >= ss.maxAlpha) { ss.alpha = ss.maxAlpha; ss.state = 'hold'; }
         } else if (ss.state === 'hold') {
           if (Math.hypot(ss.x, ss.y) > Math.min(w, h) * ss.holdDistFrac) ss.state = 'out';
         } else {
-          ss.alpha -= SHOOT_FADE_OUT;
+          ss.alpha -= SHOOT_FADE_OUT * dt;
         }
 
         if (!ss.exploded && (ss.x >= w || ss.y >= h)) {
@@ -426,9 +426,10 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
         }
 
         // ── Trail quad (2 triangles, 6 vertices) ───────────────────────────
-        const tailX  = ss.x - ss.vx * (ss.trailLength / 14);
-        const tailY  = ss.y - ss.vy * (ss.trailLength / 14);
         const speed  = Math.hypot(ss.vx, ss.vy);
+        const trailSecs = ss.trailLength / (speed || 1);
+        const tailX  = ss.x - ss.vx * trailSecs;
+        const tailY  = ss.y - ss.vy * trailSecs;
         const hw     = SHOOT_LINE_WIDTH / 2;
         const px     = (-ss.vy / speed) * hw;
         const py     = (ss.vx  / speed) * hw;
@@ -462,8 +463,8 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
         ptData[gb + 5] = a;     ptData[gb + 6] = SHOOT_GLOW_RADIUS * 2;
         glowN++;
 
-        ss.x += ss.vx;
-        ss.y += ss.vy;
+        ss.x += ss.vx * dt;
+        ss.y += ss.vy * dt;
       }
 
       // Draw all trails in one call, then all glows
@@ -479,8 +480,8 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
 
         // Expanding shockwave ring (triangle-strip annulus, per-explosion draw call)
         if (exp.ringAlpha > 0) {
-          exp.ring     += EXPLOSION_RING_EXPAND;
-          exp.ringAlpha -= EXPLOSION_RING_FADE;
+          exp.ring     += EXPLOSION_RING_EXPAND * dt;
+          exp.ringAlpha -= EXPLOSION_RING_FADE * dt;
           const ra      = Math.max(0, exp.ringAlpha);
           const rw      = 0.6; // half-width matching the canvas lineWidth=1.2
           const innerR  = Math.max(0, exp.ring - rw);
@@ -505,13 +506,14 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
         // Particles (batched together after the loop)
         for (let j = exp.particles.length - 1; j >= 0; j--) {
           const p = exp.particles[j];
-          p.alpha -= p.decay;
+          p.alpha -= p.decay * dt;
           if (p.alpha <= 0) { exp.particles.splice(j, 1); continue; }
-          p.vx *= EXPLOSION_PARTICLE_DRAG;
-          p.vy *= EXPLOSION_PARTICLE_DRAG;
-          p.vy += EXPLOSION_PARTICLE_GRAVITY;
-          p.x  += p.vx;
-          p.y  += p.vy;
+          const drag = Math.pow(EXPLOSION_PARTICLE_DRAG, dt);
+          p.vx *= drag;
+          p.vy *= drag;
+          p.vy += EXPLOSION_PARTICLE_GRAVITY * dt;
+          p.x  += p.vx * dt;
+          p.y  += p.vy * dt;
 
           const pb = particleN * 7;
           ptData[pb]     = p.x;              ptData[pb + 1] = p.y;
