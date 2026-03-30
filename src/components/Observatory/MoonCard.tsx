@@ -1,4 +1,4 @@
-import { Skeleton, Slider, Text } from '@mantine/core';
+import { ActionIcon, Skeleton, Slider, Text, Tooltip } from '@mantine/core';
 import dynamic from 'next/dynamic';
 import React, { FC, useState } from 'react';
 
@@ -27,9 +27,14 @@ function fmt(d: Date | null): string {
 
 export const MoonCard: FC<Props> = ({ location, date }) => {
   const t = useT();
-  const phase = moonPhase(date);
-  const altAz = moonAltAz(location.lat, location.lon, date);
-  const { moonrise, moonset } = moonRiseSet(location.lat, location.lon, date);
+
+  // Timeline scrubbing: null = live (current date), otherwise overridden
+  const [timelineDate, setTimelineDate] = useState<Date | null>(null);
+  const activeDate = timelineDate ?? date;
+
+  const phase = moonPhase(activeDate);
+  const altAz = moonAltAz(location.lat, location.lon, activeDate);
+  const { moonrise, moonset } = moonRiseSet(location.lat, location.lon, activeDate);
   const next = nextMoonPhases(date);
 
   const [debugAngle, setDebugAngle] = useState<number | null>(null);
@@ -71,7 +76,30 @@ export const MoonCard: FC<Props> = ({ location, date }) => {
       </div>
 
       {/* Next phases timeline — full width below */}
-      <MoonTimeline next={next} now={date} />
+      <MoonTimeline
+        next={next}
+        now={date}
+        overrideDate={timelineDate}
+        onDateChange={setTimelineDate}
+      />
+
+      {/* Return to live date button */}
+      {timelineDate !== null && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 6 }}>
+          <Tooltip label={t('observatory.returnToNow')} withArrow>
+            <ActionIcon
+              variant="light"
+              color="blue"
+              size="sm"
+              radius="xl"
+              onClick={() => setTimelineDate(null)}
+              aria-label={t('observatory.returnToNow')}
+            >
+              ↩
+            </ActionIcon>
+          </Tooltip>
+        </div>
+      )}
 
       {/* Debug: phase angle slider */}
       {ENABLE_DEBUG_SLIDER && (

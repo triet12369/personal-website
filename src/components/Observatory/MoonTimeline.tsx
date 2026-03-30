@@ -12,6 +12,10 @@ import styles from './Observatory.module.scss';
 type Props = {
   next: NextMoonPhases;
   now: Date;
+  /** If set, cursor is rendered at this date's position instead of `now`. */
+  overrideDate?: Date | null;
+  /** Called when the user drags the cursor to a new date. */
+  onDateChange?: (date: Date | null) => void;
 };
 
 // Visible window: 30 days ahead. "Now" cursor sits at 5% from the left.
@@ -59,11 +63,21 @@ function fmtCountdown(diffMs: number): string {
   return `${hours}h`;
 }
 
-export const MoonTimeline: FC<Props> = ({ next, now }) => {
+export const MoonTimeline: FC<Props> = ({ next, now, overrideDate, onDateChange }) => {
   const { t: tStr } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(300);
+  const widthRef = useRef(300);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const [, forceUpdate] = useState(0);
+
+  // Keep widthRef in sync so drag handlers don't close over stale width
+  useEffect(() => { widthRef.current = width; }, [width]);
+
+  // Drag state stored in refs so pointer move doesn't cause extra renders
+  const dragStartClientX = useRef(0);
+  const dragStartDate = useRef<Date>(now);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -88,7 +102,40 @@ export const MoonTimeline: FC<Props> = ({ next, now }) => {
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
   const nextPhase = phases[0];
-  const cursorX = CURSOR_FRACTION * width;
+
+  // Cursor position: follow overrideDate when set, otherwise sit at CURSOR_FRACTION
+  const pxPerDay = width / DAYS_TOTAL;
+  const activeCursorDate = overrideDate ?? now;
+  const deltaDays = (activeCursorDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+  const cursorX = Math.max(0, Math.min(width, CURSOR_FRACTION * width + deltaDays * pxPerDay));
+
+  const isOverride = overrideDate != null;
+
+  // Drag handlers
+  const handlePointerDown = (e: React.PointerEvent<SVGGElement>) => {
+    e.preventDefault();
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    dragStartClientX.current = e.clientX;
+    dragStartDate.current = activeCursorDate;
+    setIsDragging(true);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<SVGGElement>) => {
+    if (!isDragging) return;
+    const deltaX = e.clientX - dragStartClientX.current;
+    const deltaDaysFromDrag = deltaX / (widthRef.current / DAYS_TOTAL);
+    const newTime = dragStartDate.current.getTime() + deltaDaysFromDrag * 24 * 60 * 60 * 1000;
+    // Clamp: allow from start of timeline to end
+    const minTime = now.getTime() - CURSOR_FRACTION * DAYS_TOTAL * 24 * 60 * 60 * 1000;
+    const maxTime = now.getTime() + (1 - CURSOR_FRACTION) * DAYS_TOTAL * 24 * 60 * 60 * 1000;
+    onDateChange?.(new Date(Math.max(minTime, Math.min(maxTime, newTime))));
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<SVGGElement>) => {
+    (e.currentTarget as Element).releasePointerCapture(e.pointerId);
+    setIsDragging(false);
+    setIsHovered(false);
+  };
 
   // Track gradient: dark → bright (full moon position) → dark
   const fullX = dayToX(next.nextFull, now, width);
@@ -160,15 +207,64 @@ export const MoonTimeline: FC<Props> = ({ next, now }) => {
           );
         })}
 
-        {/* Cursor (now) */}
-        <line
-          x1={cursorX} y1={TRACK_Y - 14}
-          x2={cursorX} y2={TRACK_Y + TRACK_HEIGHT + 14}
-          stroke="#ffffff"
-          strokeWidth={2}
-          strokeLinecap="round"
-        />
-        <circle cx={cursorX} cy={TRACK_Y - 14} r={3} fill="#ffffff" />
+        {/* Draggable cursor (now / override) */}
+        <g
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          onPointerEnter={() => setIsHovered(true)}
+          onPointerLeave={() => { if (!isDragging) setIsHovered(false); }}
+          style={{ cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none' }}
+        >
+          {/* Wide invisible hit area */}
+          <rect
+            x={cursorX - 14}
+            y={TRACK_Y - 18}
+            width={28}
+            height={TRACK_HEIGHT + 36}
+            fill="transparent"
+          />
+          <line
+            x1={cursorX} y1={TRACK_Y - 14}
+            x2={cursorX} y2={TRACK_Y + TRACK_HEIGHT + 14}
+            stroke={isDragging ? '#f59e0b' : isOverride ? '#60a5fa' : '#ffffff'}
+            strokeWidth={isDragging ? 3 : isOverride ? 2.5 : 2}
+            strokeLinecap="round"
+            style={{ transition: 'stroke 0.15s, stroke-width 0.15s' }}
+          />
+          {/* Drag handle */}
+          <circle
+            cx={cursorX}
+            cy={TRACK_Y + TRACK_HEIGHT / 2}
+            r={isDragging ? 9 : isHovered ? 8 : isOverride ? 7 : 5}
+            fill={isDragging ? '#f59e0b' : isOverride ? '#3b82f6' : '#ffffff'}
+            stroke="rgba(0,0,0,0.4)"
+            strokeWidth={1.5}
+            style={{ transition: 'r 0.12s, fill 0.15s' }}
+          />
+          <circle
+            cx={cursorX}
+            cy={TRACK_Y - 14}
+            r={isDragging ? 4 : isHovered ? 4 : 3}
+            fill={isDragging ? '#f59e0b' : isOverride ? '#60a5fa' : '#ffffff'}
+            style={{ transition: 'r 0.12s, fill 0.15s' }}
+          />
+          {/* Date label below cursor when overriding */}
+          {isOverride && (
+            <text
+              x={cursorX}
+              y={TRACK_Y + TRACK_HEIGHT + 26}
+              textAnchor="middle"
+              dominantBaseline="hanging"
+              fontSize={9}
+              fill="#60a5fa"
+              fontFamily="Raleway, -apple-system, BlinkMacSystemFont, sans-serif"
+            >
+              {fmtDate(activeCursorDate)}
+            </text>
+          )}
+        </g>
       </svg>
 
       {/* Next phase countdown pill */}
