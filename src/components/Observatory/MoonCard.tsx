@@ -1,10 +1,17 @@
-import { Group, Stack, Text } from '@mantine/core';
+import { Skeleton, Text } from '@mantine/core';
+import dynamic from 'next/dynamic';
 import React, { FC } from 'react';
 
 import { moonPhase, moonAltAz, moonRiseSet, nextMoonPhases } from '../../lib/astronomy/moon';
+import { MoonTimeline } from './MoonTimeline';
 import { useT } from '../../hooks/useT';
 import type { Location } from './LocationSelector';
 import styles from './Observatory.module.scss';
+
+const MoonPhaseWebGL = dynamic(
+  () => import('./MoonPhaseWebGL').then((m) => m.MoonPhaseWebGL),
+  { ssr: false, loading: () => <Skeleton height={200} circle /> },
+);
 
 type Props = {
   location: Location;
@@ -14,10 +21,6 @@ type Props = {
 function fmt(d: Date | null): string {
   if (!d) return '—';
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-}
-
-function fmtDate(d: Date): string {
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
 export const MoonCard: FC<Props> = ({ location, date }) => {
@@ -32,44 +35,39 @@ export const MoonCard: FC<Props> = ({ location, date }) => {
   return (
     <div className={styles.card}>
       <div className={styles.cardTitle}>{t('observatory.moonTitle')}</div>
-      <Stack gap="sm">
-        <Group align="center" gap="md">
-          <Stack gap={2}>
-            <Text fw={600}>{phase.name}</Text>
-            <Text size="sm" c="dimmed">{illumPct}% {t('observatory.illuminated')}</Text>
-          </Stack>
-        </Group>
+      <div className={styles.moonLayout}>
+        {/* Left: WebGL moon — fills column */}
+        <div className={styles.moonImageCol}>
+          <MoonPhaseWebGL phaseAngle={phase.angle} />
+        </div>
 
-        <Text size="sm">
-          {t('observatory.altitude')}: {altAz.alt.toFixed(1)}° · {t('observatory.azimuth')}: {altAz.az.toFixed(1)}°
-        </Text>
-
-        <Group gap="xl">
-          <div>
+        {/* Right: metadata row */}
+        <div className={styles.moonMetaRow}>
+          <div className={styles.moonMetaItem}>
+            <Text fw={600} size="sm">{phase.name}</Text>
+            <Text size="xs" c="dimmed">{illumPct}% {t('observatory.illuminated')}</Text>
+          </div>
+          <div className={styles.moonMetaItem}>
+            <Text size="xs" c="dimmed">{t('observatory.altitude')}</Text>
+            <Text size="sm" fw={500}>{altAz.alt.toFixed(1)}°</Text>
+          </div>
+          <div className={styles.moonMetaItem}>
+            <Text size="xs" c="dimmed">{t('observatory.azimuth')}</Text>
+            <Text size="sm" fw={500}>{altAz.az.toFixed(1)}°</Text>
+          </div>
+          <div className={styles.moonMetaItem}>
             <Text size="xs" c="dimmed">{t('observatory.moonrise')}</Text>
             <Text size="sm" fw={500}>{fmt(moonrise)}</Text>
           </div>
-          <div>
+          <div className={styles.moonMetaItem}>
             <Text size="xs" c="dimmed">{t('observatory.moonset')}</Text>
             <Text size="sm" fw={500}>{fmt(moonset)}</Text>
           </div>
-        </Group>
+        </div>
+      </div>
 
-        <Stack gap={4} mt="xs">
-          <Text size="xs" c="dimmed" tt="uppercase" fw={600} style={{ letterSpacing: '0.1em' }}>{t('observatory.nextPhases')}</Text>
-          {[
-            { key: 'newMoon', label: t('observatory.newMoon'), date: next.nextNew },
-            { key: 'firstQuarter', label: t('observatory.firstQuarter'), date: next.nextFirstQuarter },
-            { key: 'fullMoon', label: t('observatory.fullMoon'), date: next.nextFull },
-            { key: 'thirdQuarter', label: t('observatory.thirdQuarter'), date: next.nextThirdQuarter },
-          ].map(({ key, label, date: d }) => (
-            <div key={key} className={styles.sunTimeRow}>
-              <span>{label}</span>
-              <span>{fmtDate(d)}</span>
-            </div>
-          ))}
-        </Stack>
-      </Stack>
+      {/* Next phases timeline — full width below */}
+      <MoonTimeline next={next} now={date} />
     </div>
   );
 };

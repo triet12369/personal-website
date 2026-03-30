@@ -33,7 +33,7 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = (props) => {
         </Group>
         <NavBar isDropdown={false} />
       </header>
-      <div className={blurBackground ? styles.contentBlur : undefined}>
+      <div className={blurBackground ? styles.contentBlur : undefined} style={{ position: 'relative' }}>
         {props.children}
       </div>
       <Footer />

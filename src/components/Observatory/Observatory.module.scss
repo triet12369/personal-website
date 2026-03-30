@@ -163,6 +163,131 @@
 
 .sunTimeRow:last-child { border-bottom: none; }
 
+/* ── Sun image (SDO AIA) ──────────────────────────────────────── */
+
+.sunImageSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sunCardDarkBg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0;
+}
+
+.sunImageWrapper {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 0 24px 6px rgba(245, 200, 80, 0.5),
+              0 0 60px 16px rgba(245, 200, 80, 0.15);
+}
+
+.sunImage {
+  /* SOHO HMI images have ~6% black border around the solar disk.
+     Scale up so the disc fills the circle, then re-centre. */
+  width: 115%;
+  height: 115%;
+  margin: -7.5%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── Sun day timeline ─────────────────────────────────────────── */
+.sunTimeline {
+  width: 100%;
+  position: relative;
+  padding: 0.6rem 0.75rem 0.5rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-sm);
+}
+
+.sunNextEventPill {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+}
+
+.sunNextLabel {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 1;
+}
+
+.sunNextName {
+  font-weight: 600;
+  color: #facc15;
+}
+
+.sunNextTime {
+  opacity: 1;
+}
+
+.sunNextCountdown {
+  opacity: 1;
+  font-size: 0.75rem;
+}
+/* ── Moon timeline ───────────────────────────────────────────────── */
+.moonTimeline {
+  width: 100%;
+  position: relative;
+  padding: 0.6rem 0.75rem 0.5rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-sm);
+}
+/* ── Moon card layout ────────────────────────────────────────── */
+.moonLayout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.moonImageCol {
+  flex: 0 0 auto;
+  width: 100%;
+}
+
+.moonMetaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  justify-content: center;
+  width: 100%;
+}
+
+.moonMetaItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 48px;
+}
+
 /* ── Observatory page main grid ───────────────────────────────── */
 .mainGrid {
   display: grid;
