@@ -1,12 +1,14 @@
 @use '../../styles/mixins' as *;
 
-/* Half of the clockwise trace:
-   0%→50%  : horizontal edge grows (top for ::before, bottom for ::after)
-   50%→100%: vertical edge grows   (right for ::before, left for ::after)  */
-@keyframes clockwise-half {
-  0%   { width: 0;    height: 0; }
-  50%  { width: 100%; height: 0; }
-  100% { width: 100%; height: 100%; }
+@property --sweep {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes border-sweep {
+  from { --sweep: 0deg; }
+  to   { --sweep: 360deg; }
 }
 
 .label {
@@ -26,48 +28,23 @@
   padding: var(--mantine-spacing-xs);
   transition: opacity 200ms ease;
 
-  /* top-left anchor: draws top edge → right edge */
-  &::before,
-  &::after {
+  &::before {
     content: '';
     position: absolute;
-    width: 0;
-    height: 0;
+    inset: 0;
+    border: 1px solid currentColor;
+    border-radius: var(--site-radius);
     pointer-events: none;
+    /* start fully masked — conic from 12 o'clock, sweeps clockwise */
+    mask-image: conic-gradient(from -90deg, black 0deg var(--sweep), transparent var(--sweep) 360deg);
+    -webkit-mask-image: conic-gradient(from -90deg, black 0deg var(--sweep), transparent var(--sweep) 360deg);
   }
 
-  &::before {
-    top: 0;
-    left: 0;
-    border-top: 1px solid currentColor;
-    border-right: 1px solid currentColor;
-    border-radius: var(--site-radius); /* all 4 corners — only top edges are visible */
-  }
-
-  /* bottom-right anchor: draws bottom edge (right→left) → left edge (bottom→top) */
-  &::after {
-    bottom: 0;
-    right: 0;
-    border-bottom: 1px solid currentColor;
-    border-left: 1px solid currentColor;
-    border-radius: var(--site-radius); /* all 4 corners — only bottom edges are visible */
-  }
-
-  &:hover {
-    &::before {
-      animation: clockwise-half 280ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    }
-    &::after {
-      animation: clockwise-half 280ms cubic-bezier(0.4, 0, 0.2, 1) 140ms forwards;
-    }
+  &:hover::before {
+    animation: border-sweep 380ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
   }
 }
 
-.active {
-  &::before {
-    animation: clockwise-half 440ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  }
-  &::after {
-    animation: clockwise-half 440ms cubic-bezier(0.4, 0, 0.2, 1) 220ms forwards;
-  }
+.active::before {
+  animation: border-sweep 500ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
