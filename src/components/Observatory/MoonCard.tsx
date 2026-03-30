@@ -1,4 +1,4 @@
-import { ActionIcon, Skeleton, Slider, Text, Tooltip } from '@mantine/core';
+import { Skeleton, Slider, Text } from '@mantine/core';
 import dynamic from 'next/dynamic';
 import React, { FC, useState } from 'react';
 
@@ -81,25 +81,8 @@ export const MoonCard: FC<Props> = ({ location, date }) => {
         now={date}
         overrideDate={timelineDate}
         onDateChange={setTimelineDate}
+        onReturnToNow={() => setTimelineDate(null)}
       />
-
-      {/* Return to live date button */}
-      {timelineDate !== null && (
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 6 }}>
-          <Tooltip label={t('observatory.returnToNow')} withArrow>
-            <ActionIcon
-              variant="light"
-              color="blue"
-              size="sm"
-              radius="xl"
-              onClick={() => setTimelineDate(null)}
-              aria-label={t('observatory.returnToNow')}
-            >
-              ↩
-            </ActionIcon>
-          </Tooltip>
-        </div>
-      )}
 
       {/* Debug: phase angle slider */}
       {ENABLE_DEBUG_SLIDER && (

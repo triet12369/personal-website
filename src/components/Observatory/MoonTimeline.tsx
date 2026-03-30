@@ -3,6 +3,7 @@
  * Modelled after SunTimeline — SVG tape, cursor at left, labels alternate top/bottom.
  */
 
+import { ActionIcon, Tooltip } from '@mantine/core';
 import React, { FC, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -16,6 +17,8 @@ type Props = {
   overrideDate?: Date | null;
   /** Called when the user drags the cursor to a new date. */
   onDateChange?: (date: Date | null) => void;
+  /** Called when the user clicks the "return to now" button. */
+  onReturnToNow?: () => void;
 };
 
 // Visible window: 30 days ahead. "Now" cursor sits at 5% from the left.
@@ -63,7 +66,7 @@ function fmtCountdown(diffMs: number): string {
   return `${hours}h`;
 }
 
-export const MoonTimeline: FC<Props> = ({ next, now, overrideDate, onDateChange }) => {
+export const MoonTimeline: FC<Props> = ({ next, now, overrideDate, onDateChange, onReturnToNow }) => {
   const { t: tStr } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(300);
@@ -122,6 +125,7 @@ export const MoonTimeline: FC<Props> = ({ next, now, overrideDate, onDateChange 
 
   const handlePointerMove = (e: React.PointerEvent<SVGGElement>) => {
     if (!isDragging) return;
+    e.preventDefault();
     const deltaX = e.clientX - dragStartClientX.current;
     const deltaDaysFromDrag = deltaX / (widthRef.current / DAYS_TOTAL);
     const newTime = dragStartDate.current.getTime() + deltaDaysFromDrag * 24 * 60 * 60 * 1000;
@@ -266,6 +270,24 @@ export const MoonTimeline: FC<Props> = ({ next, now, overrideDate, onDateChange 
           )}
         </g>
       </svg>
+
+      {/* Return to now button */}
+      {isOverride && onReturnToNow && (
+        <div style={{ position: 'absolute', top: 6, right: 8 }}>
+          <Tooltip label={tStr('observatory.returnToNow')} withArrow position="left">
+            <ActionIcon
+              variant="light"
+              color="blue"
+              size="sm"
+              radius="xl"
+              onClick={onReturnToNow}
+              aria-label={tStr('observatory.returnToNow')}
+            >
+              ↩
+            </ActionIcon>
+          </Tooltip>
+        </div>
+      )}
 
       {/* Next phase countdown pill */}
       {nextPhase && (
