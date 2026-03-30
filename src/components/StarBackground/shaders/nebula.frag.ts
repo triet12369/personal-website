@@ -10,13 +10,16 @@
 const src = /* glsl */`
 precision mediump float;
 
-uniform sampler2D u_nebula;   // packed noise: R=S II, G=H-α, B=O III
-uniform float     u_opacity;  // global opacity scale
-uniform float     u_light;    // 0.0 = dark (SHO), 1.0 = light (pantone)
-uniform float     u_w0;       // S II / layer-0 prominence weight
-uniform float     u_w1;       // H-α / layer-1 prominence weight
-uniform float     u_w2;       // O III / layer-2 prominence weight
+uniform sampler2D u_nebula;      // packed noise: R=S II, G=H-α, B=O III
+uniform float     u_opacity;     // global opacity scale
+uniform float     u_light;       // 0.0 = dark (SHO), 1.0 = light (pantone)
+uniform float     u_w0;          // S II / layer-0 prominence weight
+uniform float     u_w1;          // H-α / layer-1 prominence weight
+uniform float     u_w2;          // O III / layer-2 prominence weight
+uniform sampler2D u_star_light;  // star-glow accumulation FBO (screen space)
+uniform float     u_illum_boost; // how strongly star clusters brighten the nebula
 varying vec2      v_uv;
+varying vec2      v_screen_uv;
 
 // Noise values below THRESHOLD contribute zero alpha (cuts dead space around clouds).
 const float THRESHOLD = 0.01;
@@ -123,8 +126,20 @@ void main() {
   // Additive blend
   vec3 rgb = clamp(col0 * a0 + col1 * a1 + col2 * a2, 0.0, 1.0);
 
-  // Alpha from the most prominent layer, scaled by global opacity
-  float a = clamp(max(max(a0, a1), a2) * u_opacity, 0.0, 1.0);
+  // ── Star → nebula illumination ─────────────────────────────────────────────
+  // Sample the screen-space star-illumination FBO — each star contributes a wide
+  // soft gaussian halo drawn additively, so overlapping halos from clusters
+  // compound naturally into bright spots before reaching the nebula shader.
+  vec3  starLight  = texture2D(u_star_light, v_screen_uv).rgb * u_illum_boost;
+  float illumLuma  = dot(starLight, vec3(0.299, 0.587, 0.114));
+
+  // Boost nebula colour and allow a subtle spectral tint from star chromaticity.
+  rgb = clamp(rgb * (1.0 + illumLuma) + starLight * 0.18, 0.0, 1.0);
+
+  // Density boost: where stars cluster, nebula edges scatter a little more light.
+  float rawA = max(max(a0, a1), a2);
+  float litA = clamp(rawA * (1.0 + illumLuma * 0.7) + illumLuma * 0.06, 0.0, 1.0);
+  float a    = litA * u_opacity;
 
   // Premultiplied output
   gl_FragColor = vec4(rgb * a, a);

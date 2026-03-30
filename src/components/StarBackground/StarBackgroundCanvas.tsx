@@ -12,6 +12,7 @@ import {
   DEBUG_FRAMETIME,
   NEBULA_ENABLED, NEBULA_OPACITY, NEBULA_OPACITY_LIGHT,
   NEBULA_WEIGHT_HYDROGEN, NEBULA_WEIGHT_SO_HI, NEBULA_WEIGHT_SO_LO,
+  NEBULA_STAR_ILLUM_RADIUS, NEBULA_STAR_ILLUM_STRENGTH, NEBULA_ILLUM_BOOST,
 } from './config';
 import { DARK_PALETTE, LIGHT_PALETTE } from './palettes';
 import { makeStars, spawnExplosion, spawnShootingStar, drawFrameHUD, HUD_SAMPLES } from './helpers';
@@ -231,6 +232,8 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
 
       // ── Static stars (twinkle bursts) ─────────────────────────────────────
       const dt = Math.min(wallDelta, 100) / 1000;
+
+      // Pass 1 — update twinkle alpha only (no drawing yet)
       for (const s of stars) {
         if (s.twinkleActive) {
           s.twinklePhase += s.twinkleSpeed * dt;
@@ -249,7 +252,30 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
             s.twinklePhase  = 0;
           }
         }
+      }
 
+      // ── Star→nebula illumination (screen blend over nebula) ────────────────
+      // Wide soft halos drawn in 'screen' mode compound where stars overlap,
+      // locally brightening the nebula underneath — approximating the WebGL FBO effect.
+      if (NEBULA_ENABLED && nebulaComposed) {
+        c.globalCompositeOperation = 'screen';
+        for (const s of stars) {
+          const illumR = s.r * STAR_GLOW_FACTOR * STAR_CANVAS_GLOW_SCALE * NEBULA_STAR_ILLUM_RADIUS;
+          const illumA = Math.min(1, s.baseAlpha * NEBULA_STAR_ILLUM_STRENGTH * NEBULA_ILLUM_BOOST * 0.33);
+          const [cr, cg, cb]: [number, number, number] = isDark ? s.color : [200, 180, 150];
+          const illumGrad = c.createRadialGradient(s.x, s.y, 0, s.x, s.y, illumR);
+          illumGrad.addColorStop(0, `rgba(${cr},${cg},${cb},${illumA.toFixed(4)})`);
+          illumGrad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+          c.beginPath();
+          c.arc(s.x, s.y, illumR, 0, Math.PI * 2);
+          c.fillStyle = illumGrad;
+          c.fill();
+        }
+        c.globalCompositeOperation = 'source-over';
+      }
+
+      // Pass 2 — draw star glows
+      for (const s of stars) {
         const glowR = s.r * STAR_GLOW_FACTOR * STAR_CANVAS_GLOW_SCALE;
         const grad  = c.createRadialGradient(s.x, s.y, 0, s.x, s.y, glowR);
         if (isDark) {

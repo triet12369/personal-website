@@ -103,3 +103,15 @@ export const NEBULA_WEIGHT_SO_LO    = 0.65;  // the other one
  * A random one is chosen on every page load.
  */
 export const NEBULA_BAKED_COUNT = 12;
+
+// ─── Star → nebula illumination ───────────────────────────────────────────────
+
+/** Radius of each star's illumination halo as a multiple of its bloom sprite size.
+ *  Larger values spread light further, making cluster compounding more visible. */
+export const NEBULA_STAR_ILLUM_RADIUS   = 24.0;
+/** Peak per-star contribution written into the illumination accumulation FBO (0–1).
+ *  Keep low — halos compound additively so clusters naturally build up. */
+export const NEBULA_STAR_ILLUM_STRENGTH = 0.04;
+/** Shader multiplier applied to the accumulated illumination texture.
+ *  Controls how strongly clustered stars brighten the nebula behind them. */
+export const NEBULA_ILLUM_BOOST         = 3.0;
