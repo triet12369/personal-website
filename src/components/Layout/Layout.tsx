@@ -1,6 +1,6 @@
 import { Group } from '@mantine/core';
 import Head from 'next/head';
-import React, { FC, PropsWithChildren } from 'react';
+import React, { FC, PropsWithChildren, useEffect, useState } from 'react';
 
 import { TITLE_PREFIX } from '../../config';
 import { Github } from '../Navigation/Github';
@@ -20,13 +20,20 @@ type LayoutProps = {
 
 export const Layout: FC<PropsWithChildren<LayoutProps>> = (props) => {
   const { title, blurBackground, disableNebula } = props;
+  const [scrolled, setScrolled] = useState(false);
   // const layoutRef = useBackgroundSwipe();
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   return (
     <main className={styles.layout}>
       <StarBackground nebulaDisabled={disableNebula} />
       <Head>{title && <title>{`${TITLE_PREFIX} | ${title}`}</title>}</Head>
-      <header className={styles.header}>
+      <header className={`${styles.header}${scrolled ? ` ${styles.headerScrolled}` : ''}`}>
         <Group gap="md" align="center" justify="center">
           <NameText />
           <Github />
