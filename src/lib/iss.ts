@@ -60,10 +60,29 @@ export type ISSPosition = {
   alt: number; // km
 };
 
-/** Get current ISS position */
-export async function getISSPosition(date?: Date): Promise<ISSPosition> {
+// Module-level satrec cache — parsed once per TLE fetch, reused for fast synchronous propagation
+let _satrecCache: ReturnType<typeof satellite.twoline2satrec> | null = null;
+
+/**
+ * Fetch TLE (cached 6h) and return a parsed satrec ready for propagation.
+ * Subsequent calls within the cache window are essentially instant.
+ */
+export async function getSatrec(): Promise<ReturnType<typeof satellite.twoline2satrec>> {
   const { line1, line2 } = await fetchTLE();
-  const satrec = satellite.twoline2satrec(line1, line2);
+  if (!_satrecCache) {
+    _satrecCache = satellite.twoline2satrec(line1, line2);
+  }
+  return _satrecCache;
+}
+
+/**
+ * Synchronously compute ISS position from a pre-parsed satrec.
+ * Very fast (~microseconds) — safe to call on every animation frame.
+ */
+export function computeISSPosition(
+  satrec: ReturnType<typeof satellite.twoline2satrec>,
+  date?: Date,
+): ISSPosition {
   const d = date ?? new Date();
   const posVel = satellite.propagate(satrec, d);
   const gmst = satellite.gstime(d);
@@ -73,6 +92,12 @@ export async function getISSPosition(date?: Date): Promise<ISSPosition> {
     lon: satellite.degreesLong(geo.longitude),
     alt: geo.height,
   };
+}
+
+/** Get current ISS position */
+export async function getISSPosition(date?: Date): Promise<ISSPosition> {
+  const satrec = await getSatrec();
+  return computeISSPosition(satrec, date);
 }
 
 export type GroundTrackPoint = ISSPosition & { time: Date };
@@ -90,8 +115,7 @@ export async function getISSGroundTrack(
   minutesAfter = 90,
   intervalSec = 30,
 ): Promise<GroundTrackPoint[]> {
-  const { line1, line2 } = await fetchTLE();
-  const satrec = satellite.twoline2satrec(line1, line2);
+  const satrec = await getSatrec();
   const center = date ?? new Date();
   const startMs = center.getTime() - minutesBefore * 60000;
   const endMs = center.getTime() + minutesAfter * 60000;
@@ -133,8 +157,7 @@ export async function getISSPasses(
   altKm = 0,
   date?: Date,
 ): Promise<ISSPass[]> {
-  const { line1, line2 } = await fetchTLE();
-  const satrec = satellite.twoline2satrec(line1, line2);
+  const satrec = await getSatrec();
   const start = date ?? new Date();
   const end = new Date(start.getTime() + 48 * 3600 * 1000);
 

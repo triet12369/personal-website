@@ -31,6 +31,10 @@ type Props = {
 
 export const ISSGroundTrackWebGL: FC<Props> = ({ position, track, now, sunLat = 0, sunLon = 0 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
+  // Capture the ISS position at the moment the component mounts (i.e. when the user
+  // switches to the 3D tab) so we can aim the camera at it without depending on
+  // the frequently-updating `position` prop inside the setup effect.
+  const initialPositionRef = useRef(position);
   const sceneRef = useRef<{
     renderer: THREE.WebGLRenderer;
     scene: THREE.Scene;
@@ -51,14 +55,22 @@ export const ISSGroundTrackWebGL: FC<Props> = ({ position, track, now, sunLat = 
     const w = el.clientWidth;
     const h = el.clientHeight;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     renderer.setSize(w, h);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 1);
     el.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 1000);
-    camera.position.set(0, 0, 3);
+
+    // Aim camera at the ISS position that was current when the tab was opened.
+    // The direction vector points from Earth's center to the ISS surface point;
+    // we place the camera 3 units out along that same direction.
+    const initPos = initialPositionRef.current;
+    const issDir = latLonToVec3(initPos.lat, initPos.lon, 1).normalize();
+    camera.position.copy(issDir.multiplyScalar(3));
+    camera.lookAt(0, 0, 0);
 
     // Ambient light
     scene.add(new THREE.AmbientLight(0x333333));
@@ -109,9 +121,23 @@ export const ISSGroundTrackWebGL: FC<Props> = ({ position, track, now, sunLat = 
     controls.minDistance = 1.5;
     controls.maxDistance = 8;
 
+    // Smooth fly-in: lerp camera from its starting distance (3) to a closer
+    // viewing distance (2.2) over ~60 frames (~1 second at 60fps).
+    const FLY_FRAMES = 60;
+    const FLY_START = 3;
+    const FLY_END = 2.2;
+    let flyFrame = 0;
+
     let frameId = 0;
     const animate = () => {
       frameId = requestAnimationFrame(animate);
+      if (flyFrame < FLY_FRAMES) {
+        const t = flyFrame / FLY_FRAMES;
+        const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+        const dist = FLY_START + (FLY_END - FLY_START) * eased;
+        camera.position.setLength(dist);
+        flyFrame++;
+      }
       controls.update();
       renderer.render(scene, camera);
     };
@@ -137,17 +163,20 @@ export const ISSGroundTrackWebGL: FC<Props> = ({ position, track, now, sunLat = 
     };
   }, []);
 
-  // Update ISS position and tracks when props change
+  // Update ISS marker position only — runs every 200ms, no geometry reallocation
   useEffect(() => {
     const s = sceneRef.current;
     if (!s) return;
+    s.issMarker.position.copy(latLonToVec3(position.lat, position.lon, 1.05));
+  }, [position]);
 
-    // ISS marker
-    const issVec = latLonToVec3(position.lat, position.lon, 1.05);
-    s.issMarker.position.copy(issVec);
-
-    // Tracks
-    const nowMs = now.getTime();
+  // Rebuild track geometry only when the track array changes (every ~60s).
+  // Three.js cannot grow a BufferGeometry's buffer in-place, so we dispose the
+  // old geometry and assign a fresh one to avoid the "buffer size too small" error.
+  useEffect(() => {
+    const s = sceneRef.current;
+    if (!s) return;
+    const nowMs = Date.now();
     const pastPts = track
       .filter((p) => p.time.getTime() <= nowMs)
       .map((p) => latLonToVec3(p.lat, p.lon, 1.02));
@@ -156,16 +185,21 @@ export const ISSGroundTrackWebGL: FC<Props> = ({ position, track, now, sunLat = 
       .map((p) => latLonToVec3(p.lat, p.lon, 1.02));
 
     if (pastPts.length > 1) {
-      s.pastLine.geometry.setFromPoints(pastPts);
+      s.pastLine.geometry.dispose();
+      s.pastLine.geometry = new THREE.BufferGeometry().setFromPoints(pastPts);
     }
     if (futurePts.length > 1) {
-      s.futureLine.geometry.setFromPoints(futurePts);
+      s.futureLine.geometry.dispose();
+      s.futureLine.geometry = new THREE.BufferGeometry().setFromPoints(futurePts);
     }
+  }, [track]);
 
-    // Sun light direction
-    const sunVec = latLonToVec3(sunLat, sunLon, 5);
-    s.sunLight.position.copy(sunVec);
-  }, [position, track, now, sunLat, sunLon]);
+  // Update sun light direction when sun position changes (per-minute)
+  useEffect(() => {
+    const s = sceneRef.current;
+    if (!s) return;
+    s.sunLight.position.copy(latLonToVec3(sunLat, sunLon, 5));
+  }, [sunLat, sunLon]);
 
   return <div ref={mountRef} style={{ width: '100%', height: '100%' }} />;
 };

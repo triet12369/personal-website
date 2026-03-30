@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useT } from '../../hooks/useT';
 
-import { getISSPosition, getISSGroundTrack, getISSPasses, azimuthToDirection, ISSPass, ISSPosition, GroundTrackPoint } from '../../lib/iss';
+import { getSatrec, computeISSPosition, getISSGroundTrack, getISSPasses, azimuthToDirection, ISSPass, ISSPosition, GroundTrackPoint } from '../../lib/iss';
 import { sunAltAz } from '../../lib/astronomy/sun';
 import type { Location } from './LocationSelector';
 import styles from './Observatory.module.scss';
@@ -46,7 +46,9 @@ export const ISSCard: FC<Props> = ({ location, date }) => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(() => new Date());
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const satrecRef = useRef<Awaited<ReturnType<typeof getSatrec>> | null>(null);
+  const lastTrackRefreshRef = useRef<number>(0);
 
   // Load TLE data once (pass predictions + initial track)
   useEffect(() => {
@@ -55,34 +57,48 @@ export const ISSCard: FC<Props> = ({ location, date }) => {
     Promise.all([
       getISSPasses(location.lat, location.lon, 0, date),
       getISSGroundTrack(new Date(), 90, 90, 30),
-      getISSPosition(),
+      getSatrec(),
     ])
-      .then(([p, tr, pos]) => {
+      .then(([p, tr, satrec]) => {
         setPasses(p);
         setTrack(tr);
-        setPosition(pos);
+        satrecRef.current = satrec;
+        setPosition(computeISSPosition(satrec));
       })
       .catch(() => setError(tStr('observatory.issError')))
       .finally(() => setLoading(false));
   }, [location.lat, location.lon]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Update ISS position + track every 5 seconds
+  // Animate ISS position using requestAnimationFrame, throttled to ~200ms (5fps)
+  // SGP4 propagation is synchronous and takes <1ms, so this is safe on the main thread.
   useEffect(() => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = setInterval(async () => {
-      try {
-        const pos = await getISSPosition();
-        setPosition(pos);
-        setNow(new Date());
-        // Refresh track every minute
-        const nowSec = Math.floor(Date.now() / 1000);
-        if (nowSec % 60 === 0) {
-          const tr = await getISSGroundTrack(new Date(), 90, 90, 30);
-          setTrack(tr);
-        }
-      } catch { /* silent */ }
-    }, 5000);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    const INTERVAL_MS = 200;
+    const TRACK_REFRESH_MS = 60_000;
+    let lastUpdate = 0;
+
+    const tick = (ts: number) => {
+      rafRef.current = requestAnimationFrame(tick);
+      if (ts - lastUpdate < INTERVAL_MS) return;
+      lastUpdate = ts;
+
+      const satrec = satrecRef.current;
+      if (!satrec) return;
+
+      const now = new Date();
+      setPosition(computeISSPosition(satrec, now));
+      setNow(now);
+
+      // Refresh ground track every 60 seconds
+      if (now.getTime() - lastTrackRefreshRef.current > TRACK_REFRESH_MS) {
+        lastTrackRefreshRef.current = now.getTime();
+        getISSGroundTrack(now, 90, 90, 30)
+          .then(setTrack)
+          .catch(() => { /* silent */ });
+      }
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+    return () => { if (rafRef.current !== null) cancelAnimationFrame(rafRef.current); };
   }, []);
 
   // Sun direction for the 3D globe lighting

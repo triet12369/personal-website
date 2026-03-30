@@ -1,10 +1,14 @@
 /**
  * 2D ISS Ground Track using react-leaflet.
  * Dynamically imported (ssr: false) from ISSCard.
+ *
+ * All moving parts (marker, polylines, pan) are managed imperatively via
+ * Leaflet's API so that MapContainer/TileLayer never re-render and tiles
+ * never flash.
  */
 
 import React, { FC, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -25,27 +29,64 @@ const ISS_ICON = L.divIcon({
   iconAnchor: [16, 16],
 });
 
-type AutoPanProps = { position: ISSPosition };
+type LayersProps = {
+  position: ISSPosition;
+  track: GroundTrackPoint[];
+};
 
-const AutoPan: FC<AutoPanProps> = ({ position }) => {
+/** Inner component: has access to the Leaflet map context and manages all layers imperatively. */
+const ISSLayers: FC<LayersProps> = ({ position, track }) => {
   const map = useMap();
+  const markerRef = useRef<L.Marker | null>(null);
+  const pastLineRef = useRef<L.Polyline | null>(null);
+  const futureLineRef = useRef<L.Polyline | null>(null);
+
+  // Create layers once on mount; remove on unmount
   useEffect(() => {
-    map.setView([position.lat, position.lon], map.getZoom(), { animate: true, duration: 0.8 });
-  }, [map, position.lat, position.lon]);
+    const marker = L.marker([position.lat, position.lon], { icon: ISS_ICON }).addTo(map);
+    const pastLine = L.polyline([], { color: '#6b7280', weight: 1.5, dashArray: '4 4', opacity: 0.5 }).addTo(map);
+    const futureLine = L.polyline([], { color: '#22d3ee', weight: 2, opacity: 0.8 }).addTo(map);
+    markerRef.current = marker;
+    pastLineRef.current = pastLine;
+    futureLineRef.current = futureLine;
+    return () => {
+      marker.remove();
+      pastLine.remove();
+      futureLine.remove();
+    };
+  }, [map]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Move marker + pan every ~200ms — no DOM paint, just coordinate update
+  useEffect(() => {
+    if (!markerRef.current) return;
+    markerRef.current.setLatLng([position.lat, position.lon]);
+    map.panTo([position.lat, position.lon], { animate: true, duration: 0.15 });
+  }, [position, map]);
+
+  // Rebuild polylines only when track refreshes (~every 60s)
+  useEffect(() => {
+    if (!pastLineRef.current || !futureLineRef.current) return;
+    const nowMs = Date.now();
+    const past: [number, number][] = track
+      .filter((p) => p.time.getTime() <= nowMs)
+      .map((p) => [p.lat, p.lon]);
+    const future: [number, number][] = track
+      .filter((p) => p.time.getTime() > nowMs)
+      .map((p) => [p.lat, p.lon]);
+    pastLineRef.current.setLatLngs(past);
+    futureLineRef.current.setLatLngs(future);
+  }, [track]);
+
   return null;
 };
 
 type Props = {
   position: ISSPosition;
   track: GroundTrackPoint[];
-  now: Date;
+  now: Date; // kept for API compatibility; not used directly (Date.now() used inside)
 };
 
-export const ISSGroundTrack2D: FC<Props> = ({ position, track, now }) => {
-  const nowMs = now.getTime();
-  const past = track.filter((p) => p.time.getTime() <= nowMs).map((p): [number, number] => [p.lat, p.lon]);
-  const future = track.filter((p) => p.time.getTime() > nowMs).map((p): [number, number] => [p.lat, p.lon]);
-
+export const ISSGroundTrack2D: FC<Props> = ({ position, track }) => {
   return (
     <MapContainer
       center={[position.lat, position.lon]}
@@ -59,20 +100,7 @@ export const ISSGroundTrack2D: FC<Props> = ({ position, track, now }) => {
         subdomains="abcd"
         maxZoom={19}
       />
-      {past.length > 1 && (
-        <Polyline
-          positions={past}
-          pathOptions={{ color: '#6b7280', weight: 1.5, dashArray: '4 4', opacity: 0.5 }}
-        />
-      )}
-      {future.length > 1 && (
-        <Polyline
-          positions={future}
-          pathOptions={{ color: '#22d3ee', weight: 2, opacity: 0.8 }}
-        />
-      )}
-      <Marker position={[position.lat, position.lon]} icon={ISS_ICON} />
-      <AutoPan position={position} />
+      <ISSLayers position={position} track={track} />
     </MapContainer>
   );
 };
