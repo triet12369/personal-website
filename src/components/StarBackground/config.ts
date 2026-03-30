@@ -17,7 +17,7 @@ export const STAR_DENSITY           = 250;
 /** Hard cap — prevents excessive star counts on very large/HiDPI screens. */
 export const STAR_COUNT_MAX         = 1800;
 export const STAR_RADIUS_MIN        = 1;
-export const STAR_RADIUS_MAX        = 2;
+export const STAR_RADIUS_MAX        = 1.5;
 /** Power applied to the uniform radius sample — >1 biases toward smaller stars. */
 export const STAR_RADIUS_EXPONENT   = 5.5;
 /** Glow halo radius as a multiple of the star's core radius. */
