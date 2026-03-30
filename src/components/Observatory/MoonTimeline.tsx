@@ -163,7 +163,7 @@ export const MoonTimeline: FC<Props> = ({ next, now, overrideDate, onDateChange,
       <svg
         width={width}
         height={SVG_HEIGHT}
-        style={{ display: 'block', overflow: 'visible' }}
+        style={{ display: 'block', overflow: 'visible', touchAction: 'none' }}
       >
         <defs>
           <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
