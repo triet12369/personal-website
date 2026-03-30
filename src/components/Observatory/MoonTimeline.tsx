@@ -141,9 +141,22 @@ export const MoonTimeline: FC<Props> = ({ next, now, overrideDate, onDateChange,
     setIsHovered(false);
   };
 
-  // Track gradient: dark → bright (full moon position) → dark
-  const fullX = dayToX(next.nextFull, now, width);
+  // Track gradient: peaks at full moon, zero at new moon.
+  // Build multi-stop gradient from all four phase positions.
   const gradId = 'moonTrackGrad';
+  const phaseStops = phases.map((ph) => ({
+    frac: Math.max(0, Math.min(1, dayToX(ph.date, now, width) / width)),
+    isNew: ph.key === 'new',
+    isFull: ph.key === 'full',
+  })).sort((a, b) => a.frac - b.frac);
+
+  // Build gradient stops: full moon → yellow peak, new moon → zero (base grey)
+  const gradStops = phaseStops.map((ps) => {
+    if (ps.isFull)  return { frac: ps.frac, color: 'rgba(250,204,20,0.40)' };
+    if (ps.isNew)   return { frac: ps.frac, color: 'rgba(80,80,120,0.10)' };
+    // quarters get an intermediate warm tint
+    return          { frac: ps.frac, color: 'rgba(160,140,80,0.22)' };
+  });
 
   return (
     <div className={styles.moonTimeline} ref={containerRef}>
@@ -154,9 +167,9 @@ export const MoonTimeline: FC<Props> = ({ next, now, overrideDate, onDateChange,
       >
         <defs>
           <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="rgba(80,80,120,0.4)" />
-            <stop offset={`${(fullX / width) * 100}%`} stopColor="rgba(250,204,20,0.35)" />
-            <stop offset="100%" stopColor="rgba(80,80,120,0.4)" />
+            {gradStops.map((s, i) => (
+              <stop key={i} offset={`${s.frac * 100}%`} stopColor={s.color} />
+            ))}
           </linearGradient>
         </defs>
 

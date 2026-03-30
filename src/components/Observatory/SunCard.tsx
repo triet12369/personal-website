@@ -67,6 +67,12 @@ export const SunCard: FC<Props> = ({ location, date }) => {
   const [view, setView] = useState<SunView>('hmi_igr');
   const [opened, { open, close }] = useDisclosure(false);
 
+  // Pick a random view on first mount
+  React.useEffect(() => {
+    const idx = Math.floor(Math.random() * VIEW_META.length);
+    setView(VIEW_META[idx].key);
+  }, []);
+
   const times = sunriseSunset(location.lat, location.lon, date);
   const altAz = sunAltAz(location.lat, location.lon, date);
   const state = skyState(location.lat, location.lon, date);

@@ -233,39 +233,60 @@
 
 .sunTimeRow:last-child { border-bottom: none; }
 
-/* ── Sun image (SDO AIA) ──────────────────────────────────────── */
-
-.sunImageSection {
+/* ── Sun image wrapper + play button ────────────────────────── */
+.sunImageWrapper {
+  position: relative;
+  border-radius: var(--mantine-radius-md);
+  overflow: hidden;
+  line-height: 0; // collapse inline image gap
+  height: 380px;
+  width: 380px;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
+  align-items: stretch;
+
+  &:hover .sunPlayBtn {
+    opacity: 1;
+  }
 }
 
-.sunCardDarkBg {
+.sunPlayBtn {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 0.9rem;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.5rem 0;
+  opacity: 0.75;
+  transition: opacity 0.15s, background 0.15s;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  &:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.8);
+  }
 }
 
-.sunImageWrapper {
-  width: 180px;
-  height: 180px;
-  border-radius: 50%;
-  overflow: hidden;
-  box-shadow: 0 0 24px 6px rgba(245, 200, 80, 0.5),
-              0 0 60px 16px rgba(245, 200, 80, 0.15);
+@keyframes sunPlaySpin {
+  to { transform: rotate(360deg); }
 }
 
-.sunImage {
-  /* SOHO HMI images have ~6% black border around the solar disk.
-     Scale up so the disc fills the circle, then re-centre. */
-  width: 115%;
-  height: 115%;
-  margin: -7.5%;
-  object-fit: cover;
+.sunPlaySpinner {
   display: block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: sunPlaySpin 0.7s linear infinite;
 }
 
 /* ── Sun view switcher ───────────────────────────────────────── */
