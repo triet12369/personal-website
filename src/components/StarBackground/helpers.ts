@@ -53,7 +53,7 @@ export function pickStarColor(): [number, number, number] {
 
 export function makeStars(count: number, w: number, h: number, maxAlpha: number): Star[] {
   return Array.from({ length: count }, () => {
-    const baseAlpha = rand(0.15, maxAlpha);
+    const baseAlpha = rand(0.85, maxAlpha);
     return {
       x:            rand(0, w),
       y:            rand(0, h),

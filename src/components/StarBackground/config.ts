@@ -16,8 +16,8 @@ export const RENDERER: 'auto' | 'webgl' | 'canvas' = 'auto';
 export const STAR_DENSITY           = 250;
 /** Hard cap — prevents excessive star counts on very large/HiDPI screens. */
 export const STAR_COUNT_MAX         = 1800;
-export const STAR_RADIUS_MIN        = 1;
-export const STAR_RADIUS_MAX        = 1.5;
+export const STAR_RADIUS_MIN        = 1.5;
+export const STAR_RADIUS_MAX        = 3.5;
 /** Power applied to the uniform radius sample — >1 biases toward smaller stars. */
 export const STAR_RADIUS_EXPONENT   = 5.5;
 /** Glow halo radius as a multiple of the star's core radius. */
@@ -26,9 +26,9 @@ export const STAR_GLOW_FACTOR       = 3;
 export const STAR_TWINKLE_SPEED_MIN = 12;
 export const STAR_TWINKLE_SPEED_MAX = 24;
 /** ±alpha swing during a burst. */
-export const STAR_TWINKLE_AMPLITUDE = 0.1;
+export const STAR_TWINKLE_AMPLITUDE = 0.4;
 /** Per-second probability that a resting star starts a twinkle burst. */
-export const STAR_TWINKLE_CHANCE    = 0.3;
+export const STAR_TWINKLE_CHANCE    = 0.2;
 /** Number of full sine cycles per burst before the star goes back to rest. */
 export const STAR_TWINKLE_BURST_CYCLES = 2;
 

@@ -12,10 +12,10 @@ void main() {
   float dist = length(gl_PointCoord - vec2(0.5)) * 2.0;
 
   // Core occupies the innermost 1/GLOW_FACTOR fraction of the sprite radius.
-  float core = 1.0 - smoothstep(0.0, 0.9, dist);
+  float core = 1.0 - smoothstep(0.0, 0.35, dist);
 
   // Gaussian halo that fades to near-zero at the sprite edge.
-  float glow = exp(-dist * dist * 6.5);
+  float glow = exp(-dist * dist * 14.0);
 
   float brightness = max(core, glow);
   float alpha = v_color.a * brightness;
