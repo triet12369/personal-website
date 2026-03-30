@@ -239,10 +239,9 @@
   border-radius: var(--mantine-radius-md);
   overflow: hidden;
   line-height: 0; // collapse inline image gap
-  height: 380px;
   width: 380px;
-  display: flex;
-  align-items: stretch;
+  height: 380px;
+  background: #000;
 
   &:hover .sunPlayBtn {
     opacity: 1;

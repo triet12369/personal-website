@@ -149,7 +149,7 @@ export const SunImage: FC<Props> = ({ view = 'hmi_igr' }) => {
       <img
         src={isPlaying ? gifSrc! : `/api/sdo-image?view=${view}&t=${bust}`}
         alt={tStr('observatory.sunImageAlt')}
-        style={{ width: '100%', minHeight: 400, objectFit: 'cover', display: 'block', borderRadius: 'var(--mantine-radius-md)', background: '#000' }}
+        style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', borderRadius: 'var(--mantine-radius-md)', background: '#000' }}
       />
 
       {hasGif && playState === 'idle' && (
