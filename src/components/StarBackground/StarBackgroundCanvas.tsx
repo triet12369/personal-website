@@ -3,7 +3,8 @@ import React, { useEffect, useRef } from 'react';
 
 import styles from './StarBackground.module.scss';
 import {
-  STAR_DENSITY, STAR_COUNT_MAX, STAR_GLOW_FACTOR, STAR_TWINKLE_AMPLITUDE, STAR_TWINKLE_CHANCE, STAR_TWINKLE_BURST_CYCLES,
+  STAR_DENSITY, STAR_COUNT_MAX, STAR_GLOW_FACTOR, STAR_CANVAS_GLOW_SCALE, STAR_BLOOM_FACTOR, STAR_BLOOM_STRENGTH,
+  STAR_TWINKLE_AMPLITUDE, STAR_TWINKLE_CHANCE, STAR_TWINKLE_BURST_CYCLES,
   SHOOT_MAX_COUNT, SHOOT_SPAWN_INTERVAL, SHOOT_SPAWN_CHANCE,
   SHOOT_FADE_IN, SHOOT_FADE_OUT, SHOOT_GLOW_RADIUS, SHOOT_LINE_WIDTH,
   EXPLOSION_RING_EXPAND, EXPLOSION_RING_FADE,
@@ -249,7 +250,7 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
           }
         }
 
-        const glowR = s.r * STAR_GLOW_FACTOR;
+        const glowR = s.r * STAR_GLOW_FACTOR * STAR_CANVAS_GLOW_SCALE;
         const grad  = c.createRadialGradient(s.x, s.y, 0, s.x, s.y, glowR);
         if (isDark) {
           const [cr, cg, cb] = s.color;
@@ -266,6 +267,27 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
         c.fillStyle = grad;
         c.fill();
       }
+
+      // ── Bloom pass (additive) ─────────────────────────────────────────────
+      c.globalCompositeOperation = 'lighter';
+      for (const s of stars) {
+        const bloomR  = s.r * STAR_GLOW_FACTOR * STAR_CANVAS_GLOW_SCALE * STAR_BLOOM_FACTOR;
+        const bloomA  = s.alpha * STAR_BLOOM_STRENGTH;
+        const grad    = c.createRadialGradient(s.x, s.y, 0, s.x, s.y, bloomR);
+        if (isDark) {
+          const [cr, cg, cb] = s.color;
+          grad.addColorStop(0,   `rgba(${cr},${cg},${cb},${bloomA.toFixed(3)})`);
+          grad.addColorStop(1,   `rgba(${cr},${cg},${cb},0)`);
+        } else {
+          grad.addColorStop(0,   palette.starColor(bloomA));
+          grad.addColorStop(1,   palette.starColor(0));
+        }
+        c.beginPath();
+        c.arc(s.x, s.y, bloomR, 0, Math.PI * 2);
+        c.fillStyle = grad;
+        c.fill();
+      }
+      c.globalCompositeOperation = 'source-over';
 
       // ── Spawn shooting stars ───────────────────────────────────────────────
       spawnTimer++;

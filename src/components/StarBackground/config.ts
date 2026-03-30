@@ -22,6 +22,13 @@ export const STAR_RADIUS_MAX        = 3.5;
 export const STAR_RADIUS_EXPONENT   = 5.5;
 /** Glow halo radius as a multiple of the star's core radius. */
 export const STAR_GLOW_FACTOR       = 3;
+/** Canvas 2D glow scale — applied on top of STAR_GLOW_FACTOR to compensate for
+ *  the radial-gradient renderer producing visually larger halos than WebGL sprites. */
+export const STAR_CANVAS_GLOW_SCALE = 0.45;
+/** Bloom sprite size as a multiple of the regular glow sprite. */
+export const STAR_BLOOM_FACTOR      = 1.2;
+/** Per-star alpha multiplier for the additive bloom pass (0–1). */
+export const STAR_BLOOM_STRENGTH    = 0.09;
 /** Phase advance per second (radians). Controls how fast a burst oscillates. */
 export const STAR_TWINKLE_SPEED_MIN = 12;
 export const STAR_TWINKLE_SPEED_MAX = 24;

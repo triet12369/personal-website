@@ -3,7 +3,8 @@ import React, { useEffect, useRef } from 'react';
 
 import styles from './StarBackground.module.scss';
 import {
-  STAR_DENSITY, STAR_COUNT_MAX, STAR_GLOW_FACTOR, STAR_TWINKLE_AMPLITUDE, STAR_TWINKLE_CHANCE, STAR_TWINKLE_BURST_CYCLES,
+  STAR_DENSITY, STAR_COUNT_MAX, STAR_GLOW_FACTOR, STAR_BLOOM_FACTOR, STAR_BLOOM_STRENGTH,
+  STAR_TWINKLE_AMPLITUDE, STAR_TWINKLE_CHANCE, STAR_TWINKLE_BURST_CYCLES,
   SHOOT_MAX_COUNT, SHOOT_SPAWN_INTERVAL, SHOOT_SPAWN_CHANCE,
   SHOOT_FADE_IN, SHOOT_FADE_OUT, SHOOT_GLOW_RADIUS, SHOOT_LINE_WIDTH,
   EXPLOSION_PARTICLE_COUNT,
@@ -18,6 +19,7 @@ import { makeStars, spawnExplosion, spawnShootingStar, drawFrameHUD, HUD_SAMPLES
 import type { NebulaProps, RGBPalette, Star, ShootingStar, Explosion } from './types';
 import POINT_VERT  from './shaders/point.vert';
 import POINT_FRAG  from './shaders/point.frag';
+import BLOOM_FRAG  from './shaders/bloom.frag';
 import GEOM_VERT   from './shaders/geom.vert';
 import GEOM_FRAG   from './shaders/geom.frag';
 import NEBULA_VERT from './shaders/nebula.vert';
@@ -94,10 +96,12 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
     const overlayCtx = overlayRef.current?.getContext('2d') ?? null;
 
     let pointProg:  WebGLProgram;
+    let bloomProg:  WebGLProgram;
     let geomProg:   WebGLProgram;
     let nebulaProg: WebGLProgram | null = null;
     try {
       pointProg  = createProgram(gl, POINT_VERT,  POINT_FRAG);
+      bloomProg  = createProgram(gl, POINT_VERT,  BLOOM_FRAG);
       geomProg   = createProgram(gl, GEOM_VERT,   GEOM_FRAG);
       if (NEBULA_ENABLED) {
         nebulaProg = createProgram(gl, NEBULA_VERT, NEBULA_FRAG);
@@ -112,6 +116,12 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
       color: gl.getAttribLocation(pointProg,  'a_color'),
       size:  gl.getAttribLocation(pointProg,  'a_size'),
       res:   gl.getUniformLocation(pointProg, 'u_res')!,
+    };
+    const bLoc = {
+      pos:   gl.getAttribLocation(bloomProg,  'a_pos'),
+      color: gl.getAttribLocation(bloomProg,  'a_color'),
+      size:  gl.getAttribLocation(bloomProg,  'a_size'),
+      res:   gl.getUniformLocation(bloomProg, 'u_res')!,
     };
     const gLoc = {
       pos:   gl.getAttribLocation(geomProg,  'a_pos'),
@@ -164,6 +174,8 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
     // multiple simultaneous explosions (one per shooting star), so we size for that.
     const PT_MAX  = Math.max(STAR_COUNT_MAX, SHOOT_MAX_COUNT * EXPLOSION_PARTICLE_COUNT);
     const ptData    = new Float32Array(PT_MAX * 7);
+    // Bloom: one entry per star (same layout as ptData, larger sprites + scaled alpha)
+    const bloomData = new Float32Array(STAR_COUNT_MAX * 7);
     // Trails: 6 verts × 6 floats per shooting star
     const trailData = new Float32Array(SHOOT_MAX_COUNT * 6 * 6);
     // Ring: 2*(RING_SEGS+1) verts × 6 floats — reused per explosion
@@ -351,9 +363,32 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
         ptData[b + 4] = sb;
         ptData[b + 5] = s.alpha;
         ptData[b + 6] = s.r * STAR_GLOW_FACTOR * 2;
+        bloomData[b]     = s.x;
+        bloomData[b + 1] = s.y;
+        bloomData[b + 2] = sr;
+        bloomData[b + 3] = sg;
+        bloomData[b + 4] = sb;
+        bloomData[b + 5] = s.alpha * STAR_BLOOM_STRENGTH;
+        bloomData[b + 6] = s.r * STAR_GLOW_FACTOR * 2 * STAR_BLOOM_FACTOR;
         sn++;
       }
       drawPoints(ptData, sn);
+
+      // ── Bloom pass (additive) ─────────────────────────────────────────────
+      gl.blendFunc(gl.ONE, gl.ONE);
+      gl.useProgram(bloomProg);
+      gl.uniform2f(bLoc.res, w, h);
+      gl.bindBuffer(gl.ARRAY_BUFFER, ptBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, bloomData.subarray(0, sn * 7), gl.DYNAMIC_DRAW);
+      const bloomStride = 7 * 4;
+      gl.enableVertexAttribArray(bLoc.pos);
+      gl.vertexAttribPointer(bLoc.pos,   2, gl.FLOAT, false, bloomStride, 0);
+      gl.enableVertexAttribArray(bLoc.color);
+      gl.vertexAttribPointer(bLoc.color, 4, gl.FLOAT, false, bloomStride, 2 * 4);
+      gl.enableVertexAttribArray(bLoc.size);
+      gl.vertexAttribPointer(bLoc.size,  1, gl.FLOAT, false, bloomStride, 6 * 4);
+      gl.drawArrays(gl.POINTS, 0, sn);
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
       // ── Spawn shooting stars ───────────────────────────────────────────────
       spawnTimer++;
