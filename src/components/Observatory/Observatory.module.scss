@@ -140,6 +140,10 @@
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
   align-items: start;
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
 }
 
 .detailImageWrap {

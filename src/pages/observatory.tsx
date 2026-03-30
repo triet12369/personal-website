@@ -68,13 +68,13 @@ export default function ObservatoryPage() {
           {/* Earth · Sun · Moon */}
           {location && (
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'stretch' }}>
-              <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+              <div style={{ flex: '1 1 min(100%, 280px)', minWidth: 0 }}>
                 <EarthCard location={location} date={date} />
               </div>
-              <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+              <div style={{ flex: '1 1 min(100%, 280px)', minWidth: 0 }}>
                 <SunCard location={location} date={date} />
               </div>
-              <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+              <div style={{ flex: '1 1 min(100%, 280px)', minWidth: 0 }}>
                 <MoonCard location={location} date={date} />
               </div>
             </div>
@@ -83,10 +83,10 @@ export default function ObservatoryPage() {
           {/* Planets · Night Sky */}
           {location && (
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'stretch' }}>
-              <div style={{ flex: '1 1 300px', minWidth: 0 }}>
+              <div style={{ flex: '1 1 min(100%, 340px)', minWidth: 0 }}>
                 <PlanetsCard location={location} date={date} />
               </div>
-              <div style={{ flex: '1 1 300px', minWidth: 0 }}>
+              <div style={{ flex: '1 1 min(100%, 340px)', minWidth: 0 }}>
                 <NightSkyCard location={location} date={date} />
               </div>
             </div>
