@@ -237,15 +237,17 @@ export const SunTimeline: FC<Props> = ({ times, now }) => {
     nextEventMinAhead < RIGHT_VISIBLE_MINUTES;
   const showBreakZone = nextEvent != null && !nextEventIsVisible;
 
-  // If showing the break zone, shrink the main timeline area
-  const mainWidth = showBreakZone ? Math.max(80, width - RESERVED_RIGHT - BREAK_WIDTH) : width;
-  // // symbol sits right at mainWidth (the natural clip edge), next-event slot fills the rest
-  const breakEndX = mainWidth + BREAK_WIDTH;
-  const nextSlotCenterX = (breakEndX + width) / 2;
+  console.log("Debug log", { nowMinutes, nextEvent, nextEventMinAhead, nextEventIsVisible, showBreakZone });
+
+  // Cursor always sits at CURSOR_FRACTION * width — never move it.
+  // When a break zone is needed, clip the main tape at a fixed distance and
+  // render the break symbol + next-event slot in the reserved right strip.
+  const cursorX = CURSOR_FRACTION * width;
+  const clipRight = showBreakZone ? Math.max(80, width - RESERVED_RIGHT - BREAK_WIDTH) : width;
+  const breakSymbolCenterX = clipRight + BREAK_WIDTH / 2;
+  const nextSlotCenterX = clipRight + BREAK_WIDTH + (RESERVED_RIGHT - BREAK_WIDTH) / 2;
 
   // Zone colors for the reserved slot
-  // currentZoneColor: what's active right now (fills break gap up to the next-event tick)
-  // nextSlotZoneColor: what starts AT the next event (fills after the tick)
   const currentZoneColor = showBreakZone
     ? getZoneColorAtMinute(times, nowMinutes)
     : ZONE_COLORS.night;
@@ -253,19 +255,18 @@ export const SunTimeline: FC<Props> = ({ times, now }) => {
     ? getZoneColorAtMinute(times, nextEvent.minutes)
     : ZONE_COLORS.night;
 
-  const zones = buildZones(times, nowMinutes, mainWidth);
-  const cursorX = CURSOR_FRACTION * mainWidth;
+  // Always compute positions using the full width so the cursor stays fixed.
+  const zones = buildZones(times, nowMinutes, width);
 
-  // Only render events within the actual visible window:
-  // left side: up to 1h past cursor's left edge; right side: up to RIGHT_VISIBLE_MINUTES
-  const leftWindowMinutes = CURSOR_FRACTION * VISIBLE_HOURS * 60 + 60; // a bit past left edge
-  const rightWindowMinutes = showBreakZone ? RIGHT_VISIBLE_MINUTES : (1 - CURSOR_FRACTION) * VISIBLE_HOURS * 60 + 60;
-  const visibleEvents = allEvents.filter(
-    (e) => {
-      const delta = e.minutes - nowMinutes;
-      return delta >= -leftWindowMinutes && delta < rightWindowMinutes;
-    },
-  );
+  // Only render events within the visible tape window
+  const leftWindowMinutes = CURSOR_FRACTION * VISIBLE_HOURS * 60 + 60;
+  const rightWindowMinutes = showBreakZone
+    ? (clipRight / width) * VISIBLE_HOURS * 60 - CURSOR_FRACTION * VISIBLE_HOURS * 60
+    : (1 - CURSOR_FRACTION) * VISIBLE_HOURS * 60 + 60;
+  const visibleEvents = allEvents.filter((e) => {
+    const delta = e.minutes - nowMinutes;
+    return delta >= -leftWindowMinutes && delta < rightWindowMinutes;
+  });
 
   return (
     <div className={styles.sunTimeline} ref={containerRef}>
@@ -277,7 +278,7 @@ export const SunTimeline: FC<Props> = ({ times, now }) => {
         <defs>
           {showBreakZone && (
             <clipPath id="sunMainClip">
-              <rect x={0} y={0} width={mainWidth} height={SVG_HEIGHT} />
+              <rect x={0} y={0} width={clipRight} height={SVG_HEIGHT} />
             </clipPath>
           )}
         </defs>
@@ -299,7 +300,7 @@ export const SunTimeline: FC<Props> = ({ times, now }) => {
 
         {/* Event ticks + labels */}
         {visibleEvents.map((ev, idx) => {
-          const x = minuteToX(ev.minutes, nowMinutes, mainWidth);
+          const x = minuteToX(ev.minutes, nowMinutes, width);
           const isNext = nextEvent?.key === ev.key;
           const labelBelow = idx % 2 === 1;
 
@@ -357,16 +358,16 @@ export const SunTimeline: FC<Props> = ({ times, now }) => {
         {/* ── Break indicator + next-event slot ──────────────────── */}
         {showBreakZone && nextEvent && (
           <g>
-            {/* Current zone bar: from breakEndX → nextSlotCenterX (before the tick) */}
+            {/* Current zone bar: from clipRight + BREAK_WIDTH → nextSlotCenterX */}
             <rect
-              x={breakEndX}
+              x={clipRight + BREAK_WIDTH}
               y={ZONE_Y}
-              width={Math.max(0, nextSlotCenterX - breakEndX)}
+              width={Math.max(0, nextSlotCenterX - (clipRight + BREAK_WIDTH))}
               height={ZONE_HEIGHT}
               fill={currentZoneColor}
               rx={4}
             />
-            {/* Next zone bar: from nextSlotCenterX → width (after the tick) */}
+            {/* Next zone bar: from nextSlotCenterX → width */}
             <rect
               x={nextSlotCenterX}
               y={ZONE_Y}
@@ -375,20 +376,20 @@ export const SunTimeline: FC<Props> = ({ times, now }) => {
               fill={nextSlotZoneColor}
               rx={4}
             />
-            {/* Break lines ( || ) right at mainWidth — the natural zone gap */}
+            {/* Break lines ( || ) centred at breakSymbolCenterX */}
             <line
-              x1={mainWidth + 6}
+              x1={breakSymbolCenterX - 4}
               y1={TICK_TOP + 6}
-              x2={mainWidth + 6}
+              x2={breakSymbolCenterX - 4}
               y2={TICK_BOTTOM - 6}
               stroke="rgba(255,255,255,0.55)"
               strokeWidth={1.5}
               strokeLinecap="round"
             />
             <line
-              x1={mainWidth + 14}
+              x1={breakSymbolCenterX + 4}
               y1={TICK_TOP + 6}
-              x2={mainWidth + 14}
+              x2={breakSymbolCenterX + 4}
               y2={TICK_BOTTOM - 6}
               stroke="rgba(255,255,255,0.55)"
               strokeWidth={1.5}
