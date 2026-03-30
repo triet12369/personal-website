@@ -29,12 +29,15 @@ const NEBULA_LAYER_COUNT  = 3;    // independent noise layers packed into R/G/B 
 const NEBULA_BAKED_WIDTH  = 1920; // bake resolution (stretched to fit screen at runtime)
 const NEBULA_BAKED_HEIGHT = 1080;
 
-const NEBULA_OCTAVES      = 6;    // number of fBm noise layers — more = finer cloud detail, slower generation
-const NEBULA_SCALE        = 1;    // base noise frequency — lower = larger cloud formations, higher = tighter wisps
-const NEBULA_PERSISTENCE  = 0.4;  // amplitude falloff per octave (0–1) — lower = smoother/softer clouds
+const NEBULA_OCTAVES      = 8;    // number of fBm noise layers — more = finer cloud detail, slower generation
+const NEBULA_SCALE        = 2; // base noise frequency — lower = larger cloud formations, higher = tighter wisps
+const NEBULA_PERSISTENCE  = 0.45; // amplitude falloff per octave (0–1) — lower = smoother/softer clouds
 const NEBULA_LACUNARITY   = 2.0;  // frequency multiplier per octave — 2.0 doubles detail each layer
 const NEBULA_SEED         = 42;   // base RNG seed; each variant offsets by index × 31337, each layer by prime × 7919
-const NEBULA_BLUR_PASSES  = 2;    // box-blur passes after noise sampling — softens hard edges, 2–3 is usually enough
+const NEBULA_BLUR_PASSES  = 1;    // box-blur passes after noise sampling — 1 preserves nebula edge sharpness
+// Domain warp strength — how much a secondary fBm field distorts the primary sample coordinates.
+// Higher = more turbulent twisted filaments (nebula-like); 0 = plain fBm (aurora-like).
+const NEBULA_WARP_STRENGTH = 0.55;
 
 // ⚠ NEBULA_THRESHOLD is intentionally NOT applied here — raw fBm values [0,1]
 // are stored directly in R/G/B channels so the shader can apply threshold and
@@ -98,6 +101,28 @@ function fbm(perm, x, y) {
   return (value / maxVal) * 0.5 + 0.5;
 }
 
+/**
+ * Domain-warped fBm: distorts the sample coordinates using two independent fBm
+ * fields before sampling the final noise. This produces the twisted filaments
+ * and pillar-like structures characteristic of emission nebulae.
+ *
+ * warpPerm0/1 are the permutation tables for the two warp fields — they must
+ * differ from `perm` so the warp and the detail are independent.
+ */
+function warpedFbm(perm, warpPerm0, warpPerm1, x, y) {
+  // First warp pass — shift coords by a low-frequency fBm field
+  const wx = fbm(warpPerm0, x + 0.0, y + 0.0) - 0.5;
+  const wy = fbm(warpPerm1, x + 5.2, y + 1.3) - 0.5;
+  const x1 = x + NEBULA_WARP_STRENGTH * wx;
+  const y1 = y + NEBULA_WARP_STRENGTH * wy;
+  // Second warp pass — feeds warped coords back in for extra turbulence
+  const wx2 = fbm(warpPerm0, x1 + 1.7, y1 + 9.2) - 0.5;
+  const wy2 = fbm(warpPerm1, x1 + 8.3, y1 + 2.8) - 0.5;
+  const x2  = x1 + (NEBULA_WARP_STRENGTH * 0.5) * wx2;
+  const y2  = y1 + (NEBULA_WARP_STRENGTH * 0.5) * wy2;
+  return fbm(perm, x2, y2);
+}
+
 // ─── Color interpolation (kept for reference / future use) ──────────────────
 
 // (Colour gradient logic has moved to runtime shaders / canvas decompose step)
@@ -145,6 +170,11 @@ function generatePackedTexture(seedBase, width, height) {
     buildPerm(seedBase + 7919),
     buildPerm(seedBase + 15838),
   ];
+  // Two extra permutation tables used exclusively for domain warp displacement fields
+  const warpPerms = [
+    buildPerm(seedBase + 23757),
+    buildPerm(seedBase + 31676),
+  ];
   let pixels = new Uint8Array(width * height * 4);
 
   for (let y = 0; y < height; y++) {
@@ -152,10 +182,10 @@ function generatePackedTexture(seedBase, width, height) {
     for (let x = 0; x < width; x++) {
       const nx = x / width;
       const i  = (y * width + x) * 4;
-      pixels[i]     = Math.round(fbm(perms[0], nx, ny) * 255);  // R = S II / layer 0
-      pixels[i + 1] = Math.round(fbm(perms[1], nx, ny) * 255);  // G = H-α / layer 1
-      pixels[i + 2] = Math.round(fbm(perms[2], nx, ny) * 255);  // B = O III / layer 2
-      pixels[i + 3] = 255;                                        // A = fully opaque
+      pixels[i]     = Math.round(warpedFbm(perms[0], warpPerms[0], warpPerms[1], nx, ny) * 255);  // R = S II / layer 0
+      pixels[i + 1] = Math.round(warpedFbm(perms[1], warpPerms[1], warpPerms[0], nx, ny) * 255);  // G = H-α / layer 1
+      pixels[i + 2] = Math.round(warpedFbm(perms[2], warpPerms[0], warpPerms[1], nx, ny) * 255);  // B = O III / layer 2
+      pixels[i + 3] = 255;                                                                          // A = fully opaque
     }
   }
 

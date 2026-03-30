@@ -19,10 +19,13 @@ uniform float     u_w2;       // O III / layer-2 prominence weight
 varying vec2      v_uv;
 
 // Noise values below THRESHOLD contribute zero alpha (cuts dead space around clouds).
-const float THRESHOLD = 0.1;
+const float THRESHOLD = 0.01;
 
 float nebulaAlpha(float v) {
-  return max(0.0, (v - THRESHOLD) / (1.0 - THRESHOLD));
+  float n = max(0.0, (v - THRESHOLD) / (1.0 - THRESHOLD));
+  // Squared curve: bright dense cores but still preserves enough cloud body.
+  // n³ was too aggressive — crushed the mid-density cloud mass to near-zero.
+  return n * n;
 }
 
 // ── Dark palette — Hubble SHO ─────────────────────────────────────────────────
@@ -111,6 +114,11 @@ void main() {
   vec3 col0 = u_light > 0.5 ? lightL0(v0) : darkS2(v0);
   vec3 col1 = u_light > 0.5 ? lightL1(v1) : darkHa(v1);
   vec3 col2 = u_light > 0.5 ? lightL2(v2) : darkO3(v2);
+
+  // Cross-layer scattering: Hα bleeds a little colour into adjacent emission bands.
+  // Real nebulae have overlapping ionisation zones rather than pure independent layers.
+  col0 += 0.08 * col1 * a1;   // Hα → SII
+  col2 += 0.05 * col1 * a1;   // Hα → OIII
 
   // Additive blend
   vec3 rgb = clamp(col0 * a0 + col1 * a1 + col2 * a2, 0.0, 1.0);
