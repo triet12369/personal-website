@@ -42,14 +42,16 @@ export default function ObservatoryPage() {
       <Container size="xl" py="xl">
         <Stack gap="lg">
           {/* Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1.5rem', flexWrap: 'wrap' }}>
-            <Stack gap="xs" align="flex-start">
-              <Title order={1}>{t('observatory.heading')}</Title>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <LiveClock onMinuteTick={handleMinuteTick} />
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'stretch' }}>
+            <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+              <div className={obsStyles.card} style={{ height: '100%' }}>
+                <Stack gap="xs" align="center" justify='center' style={{ height: '100%'}}>
+                  <Title order={1}>{t('observatory.heading')}</Title>
+                  <LiveClock onMinuteTick={handleMinuteTick} />
+                  <LocationSelector location={location} onLocationChange={handleLocationChange} />
+                </Stack>
               </div>
-              <LocationSelector location={location} onLocationChange={handleLocationChange} />
-            </Stack>
+            </div>
             {location && (
               <div style={{ flex: '1 1 400px', minWidth: 0 }}>
                 <WeatherCard location={location} />

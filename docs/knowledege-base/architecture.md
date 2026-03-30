@@ -115,6 +115,7 @@ All pages use `getStaticProps` (static generation). No ISR/revalidation — cont
 | `/blog/[slug]` | `getPostBySlug(slug)` | MDX, `Comments`, `Reactions`, `ViewCount` |
 | `/projects` | `getAllProjects()` | `ProjectList` |
 | `/projects/[slug]` | `getProjectBySlug(slug)` | MDX, `Reactions`, `ViewCount` |
+| `/observatory` | Client-side only (empty `getStaticProps`) | `LiveClock`, `LocationSelector`, `SunCard`, `MoonCard`, `EarthCard`, `PlanetsCard`, `NightSkyCard`, `ISSCard`, `WeatherCard` |
 | `/admin` | Client-side CF Access check | `useAdminAuth()` |
 
 **Blog post redirect**: If `frontmatter.href` is set, `[slug].tsx` redirects there instead of rendering MDX.
@@ -223,6 +224,17 @@ image?: string
 | `CommentCount` | `components/Engagement/` | Total comment badge |
 | `Reactions` | `components/Engagement/` | Emoji reaction buttons |
 | `ViewCount` | `components/Engagement/` | Page view counter |
+| `LiveClock` | `components/Observatory/` | Live HH:MM:SS clock; fires minute-tick callback |
+| `LocationSelector` | `components/Observatory/` | Geolocation auto-detect + manual lat/lon input; persisted to localStorage |
+| `WeatherCard` | `components/Observatory/` | ClearOutside astronomical forecast embed |
+| `SunCard` | `components/Observatory/` | Sky state, sun altitude/azimuth, all twilight/rise/set times |
+| `MoonCard` | `components/Observatory/` | Moon phase, illumination, altitude/azimuth, rise/set, next phases |
+| `EarthCard` | `components/Observatory/` | Full-disk satellite Earth imagery (GOES-19/18, Himawari-9); 15-min cache |
+| `PlanetsCard` | `components/Observatory/` | Visible planet altitude/azimuth and rise/set times |
+| `NightSkyCard` | `components/Observatory/` | Visible constellations and deep-sky objects |
+| `ISSCard` | `components/Observatory/` | Real-time ISS position, pass predictions, 2D/3D ground track |
+| `ISSGroundTrack2D` | `components/Observatory/` | Leaflet map with ISS ground track (dynamic, no SSR) |
+| `ISSGroundTrackWebGL` | `components/Observatory/` | Three.js WebGL globe with ISS track (dynamic, no SSR) |
 
 ---
 
@@ -322,7 +334,72 @@ Three tiers:
 
 ---
 
-## 14. Demos
+## 14. Observatory Module
+
+The Observatory is a real-time astronomy dashboard at `/observatory`. It is fully client-side (all computation runs in the browser) and requires no backend calls except for ISS TLE data and satellite imagery.
+
+### Page
+- **Route**: `/observatory` → `src/pages/observatory.tsx`
+- `getStaticProps` returns empty props (client-only page)
+- Manages a single shared `location: Location | null` state and a clock-driven `date: Date` that updates every minute (triggers astronomy recalculations)
+
+### Components (`src/components/Observatory/`)
+
+| Component | Purpose |
+|---|---|
+| `LiveClock` | Displays live HH:MM:SS / date; fires `onMinuteTick` callback each minute to drive astronomy updates |
+| `LocationSelector` | Geolocation auto-detect + manual lat/lon modal; persists to `localStorage` key `obs_location` |
+| `WeatherCard` | Embeds a ClearOutside astronomical weather forecast image (linked to clearoutside.com) for the selected coordinates |
+| `SunCard` | Shows sky state (day/twilight/dark), current sun altitude & azimuth, and all twilight/sunrise/sunset times |
+| `MoonCard` | Shows moon phase, illumination %, altitude/azimuth, moonrise/moonset times, and next four phase dates |
+| `EarthCard` | Shows the nearest full-disk Earth satellite image (GOES-19 by default, refreshed every 15 min); modal opens a grid of all satellites (GOES-19, GOES-18, Himawari-9) |
+| `PlanetsCard` | Lists Mercury, Venus, Mars, Jupiter, Saturn with altitude/azimuth and rise/set times; dims rows for objects below the horizon |
+| `NightSkyCard` | Lists visible constellations and deep-sky objects (galaxies, nebulae, clusters) above the horizon |
+| `ISSCard` | Real-time ISS position, speed, altitude, next visible pass predictions, and ground track. Supports two map views switched via `SegmentedControl`: 2D (Leaflet) and 3D (Three.js WebGL globe). Both map components are dynamically imported with `ssr: false`. |
+| `ISSGroundTrack2D` | Leaflet map with ISS marker (auto-pan), polyline ground track, and observer marker |
+| `ISSGroundTrackWebGL` | Three.js WebGL globe with Earth texture/specular maps, ISS ground track polyline, and observer pin; supports mouse orbit via `OrbitControls` |
+
+All card components share `.card` / `.cardTitle` CSS classes from `Observatory.module.scss`.
+
+### Astronomy Library (`src/lib/astronomy/`)
+
+Pure client-side math; no external API calls.
+
+| Module | Exports / Purpose |
+|---|---|
+| `julian.ts` | Julian Day Number conversions |
+| `coordinates.ts` | Equatorial → horizontal (alt/az) coordinate transforms |
+| `sun.ts` | `sunriseSunset()`, `sunAltAz()`, `skyState()` (day/twilight/dark) |
+| `moon.ts` | `moonPhase()`, `moonAltAz()`, `moonRiseSet()`, `nextMoonPhases()` |
+| `planets.ts` | `getVisiblePlanets()` — Mercury through Saturn alt/az and rise/set times |
+| `sky.ts` | `getVisibleConstellations()`, `getVisibleNebulae()` — horizon-filtered star catalog lookups |
+| `index.ts` | Re-exports all of the above |
+
+### ISS Data (`src/lib/iss.ts`)
+
+- Fetches TLE from **CelesTrak** (`gp.php?CATNR=25544`) — free, no auth, CORS-enabled
+- Propagates orbit with **satellite.js** (SGP4 algorithm)
+- Exports: `getISSPosition()`, `getISSGroundTrack()`, `getISSPasses()`
+- TLE cached to `localStorage` key `obs_iss_tle` with a **6-hour TTL**
+- ISS position and track refresh every **5 seconds**; ground track re-fetched every **60 seconds**
+
+### Satellite Earth Imagery (`src/lib/satelliteEarth.ts`)
+
+- Fetches full-disk Earth images from GOES-19 (East), GOES-18 (West), and Himawari-9
+- Proxied through Next.js API route `/api/satellite-image`
+- Cached per-satellite in `localStorage` with a **15-minute TTL**
+
+### localStorage Keys (Observatory)
+
+| Key | Content | TTL |
+|---|---|---|
+| `obs_location` | `{ lat, lon }` | Permanent (user-set) |
+| `obs_iss_tle` | TLE lines + `fetchedAt` | 6 hours |
+| `obs_sat_GOES19` / `GOES18` / `Himawari9` | Satellite image URL + timestamp | 15 minutes |
+
+---
+
+## 15. Demos
 
 Self-contained interactive projects under `demos/`. Currently:
 
