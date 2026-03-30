@@ -37,6 +37,15 @@ const MY_DEFAULT_THEME = createTheme({
     ],
   },
   primaryColor: COLOR_PANTONE,
+  components: {
+    Modal: {
+      styles: {
+        // Use dvh so full-screen modals respect mobile browser chrome
+        inner: { height: '100dvh' },
+        content: { maxHeight: '100dvh' },
+      },
+    },
+  },
 });
 
 export default MY_DEFAULT_THEME;
