@@ -42,6 +42,11 @@ const LABEL_Y_BOTTOM = TICK_BOTTOM + 12;
 const VISIBLE_HOURS = 4;
 // "now" cursor sits 30% from left
 const CURSOR_FRACTION = 0.3;
+// Reserved zone at the right edge for the next out-of-window event
+const RESERVED_RIGHT = 72; // px
+const BREAK_WIDTH = 20;    // px for the break indicator
+// Minutes from cursor to the right edge of the visible 4h window
+const RIGHT_VISIBLE_MINUTES = (1 - CURSOR_FRACTION) * VISIBLE_HOURS * 60;
 
 function minutesOfDay(d: Date | null): number | null {
   if (!d) return null;
@@ -60,6 +65,34 @@ function fmtCountdown(diffMs: number): string {
   const m = total % 60;
   if (h === 0) return `${m}m`;
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
+// Returns the background zone color active at the given minute-of-day
+function getZoneColorAtMinute(times: SunTimes, minute: number): string {
+  const events: Array<{ minutes: number; color: string }> = [
+    { minutes: 0, color: ZONE_COLORS.night },
+  ];
+  const map: Array<[keyof SunTimes, keyof typeof ZONE_COLORS]> = [
+    ['astronomicalDawn', 'astro'],
+    ['nauticalDawn', 'nautical'],
+    ['civilDawn', 'civil'],
+    ['sunrise', 'day'],
+    ['sunset', 'civil'],
+    ['civilDusk', 'nautical'],
+    ['nauticalDusk', 'astro'],
+    ['astronomicalDusk', 'night'],
+  ];
+  for (const [key, phase] of map) {
+    const m = minutesOfDay(times[key]);
+    if (m !== null) events.push({ minutes: m, color: ZONE_COLORS[phase] });
+  }
+  events.sort((a, b) => a.minutes - b.minutes);
+  let color = ZONE_COLORS.night;
+  for (const ev of events) {
+    if (ev.minutes <= minute) color = ev.color;
+    else break;
+  }
+  return color;
 }
 
 type Event = {
@@ -188,17 +221,44 @@ export const SunTimeline: FC<Props> = ({ times, now }) => {
 
   // Next upcoming event
   const nowMs = now.getTime();
-  const nextEvent = allEvents
-    .filter((e) => e.date.getTime() > nowMs)
-    .sort((a, b) => a.date.getTime() - b.date.getTime())[0] ?? null;
+  const nextEvent =
+    allEvents
+      .filter((e) => e.date.getTime() > nowMs)
+      .sort((a, b) => a.date.getTime() - b.date.getTime())[0] ?? null;
 
-  const zones = buildZones(times, nowMinutes, width);
-  const cursorX = CURSOR_FRACTION * width;
+  // Use real millisecond delta (not UTC-minute arithmetic) so timezone wraps don't confuse it
+  const nextEventMsAhead = nextEvent ? nextEvent.date.getTime() - nowMs : null;
+  const nextEventMinAhead = nextEventMsAhead != null ? nextEventMsAhead / 60000 : null;
 
-  // Only render events within ±(VISIBLE_HOURS/2 + 1)h of now for legibility
-  const windowMinutes = (VISIBLE_HOURS / 2 + 1) * 60;
+  // Show break zone when: there IS a next event AND it falls beyond the right edge of the 4h window
+  const nextEventIsVisible =
+    nextEventMinAhead != null &&
+    nextEventMinAhead >= 0 &&
+    nextEventMinAhead < RIGHT_VISIBLE_MINUTES;
+  const showBreakZone = nextEvent != null && !nextEventIsVisible;
+
+  // If showing the break zone, shrink the main timeline area
+  const mainWidth = showBreakZone ? Math.max(80, width - RESERVED_RIGHT - BREAK_WIDTH) : width;
+  const breakX = mainWidth;
+  const nextSlotCenterX = breakX + BREAK_WIDTH + RESERVED_RIGHT / 2;
+
+  // Zone color for the reserved slot
+  const nextSlotZoneColor = showBreakZone && nextEvent
+    ? getZoneColorAtMinute(times, nextEvent.minutes)
+    : ZONE_COLORS.night;
+
+  const zones = buildZones(times, nowMinutes, mainWidth);
+  const cursorX = CURSOR_FRACTION * mainWidth;
+
+  // Only render events within the actual visible window:
+  // left side: up to 1h past cursor's left edge; right side: up to RIGHT_VISIBLE_MINUTES
+  const leftWindowMinutes = CURSOR_FRACTION * VISIBLE_HOURS * 60 + 60; // a bit past left edge
+  const rightWindowMinutes = showBreakZone ? RIGHT_VISIBLE_MINUTES : (1 - CURSOR_FRACTION) * VISIBLE_HOURS * 60 + 60;
   const visibleEvents = allEvents.filter(
-    (e) => Math.abs(e.minutes - nowMinutes) < windowMinutes,
+    (e) => {
+      const delta = e.minutes - nowMinutes;
+      return delta >= -leftWindowMinutes && delta < rightWindowMinutes;
+    },
   );
 
   return (
@@ -208,22 +268,32 @@ export const SunTimeline: FC<Props> = ({ times, now }) => {
         height={SVG_HEIGHT}
         style={{ display: 'block', overflow: 'visible' }}
       >
-        {/* Zone fill rects */}
-        {zones.map((z, i) => (
-          <rect
-            key={i}
-            x={z.x}
-            y={ZONE_Y}
-            width={Math.max(0, z.width)}
-            height={ZONE_HEIGHT}
-            fill={z.color}
-            rx={4}
-          />
-        ))}
+        <defs>
+          {showBreakZone && (
+            <clipPath id="sunMainClip">
+              <rect x={0} y={0} width={mainWidth} height={SVG_HEIGHT} />
+            </clipPath>
+          )}
+        </defs>
+
+        {/* Zone fill rects — clipped to main area when break zone is active */}
+        <g clipPath={showBreakZone ? 'url(#sunMainClip)' : undefined}>
+          {zones.map((z, i) => (
+            <rect
+              key={i}
+              x={z.x}
+              y={ZONE_Y}
+              width={Math.max(0, z.width)}
+              height={ZONE_HEIGHT}
+              fill={z.color}
+              rx={4}
+            />
+          ))}
+        </g>
 
         {/* Event ticks + labels */}
         {visibleEvents.map((ev, idx) => {
-          const x = minuteToX(ev.minutes, nowMinutes, width);
+          const x = minuteToX(ev.minutes, nowMinutes, mainWidth);
           const isNext = nextEvent?.key === ev.key;
           const labelBelow = idx % 2 === 1;
 
@@ -277,6 +347,73 @@ export const SunTimeline: FC<Props> = ({ times, now }) => {
           strokeLinecap="round"
         />
         <circle cx={cursorX} cy={ZONE_Y - 12} r={3} fill="#ffffff" />
+
+        {/* ── Break indicator + next-event slot ──────────────────── */}
+        {showBreakZone && nextEvent && (
+          <g>
+            {/* Zone bar in reserved slot */}
+            <rect
+              x={breakX + BREAK_WIDTH}
+              y={ZONE_Y}
+              width={RESERVED_RIGHT}
+              height={ZONE_HEIGHT}
+              fill={nextSlotZoneColor}
+              rx={4}
+            />
+            {/* Break lines ( // ) between main window and reserved slot */}
+            <line
+              x1={breakX + 5}
+              y1={TICK_TOP}
+              x2={breakX + 3}
+              y2={TICK_BOTTOM}
+              stroke="rgba(255,255,255,0.35)"
+              strokeWidth={1.5}
+              strokeLinecap="round"
+            />
+            <line
+              x1={breakX + 13}
+              y1={TICK_TOP}
+              x2={breakX + 11}
+              y2={TICK_BOTTOM}
+              stroke="rgba(255,255,255,0.35)"
+              strokeWidth={1.5}
+              strokeLinecap="round"
+            />
+            {/* Next event tick */}
+            <line
+              x1={nextSlotCenterX}
+              y1={TICK_TOP}
+              x2={nextSlotCenterX}
+              y2={TICK_BOTTOM}
+              stroke="#facc15"
+              strokeWidth={2}
+            />
+            {/* Next event short label (below zone bar) */}
+            <text
+              x={nextSlotCenterX}
+              y={LABEL_Y_BOTTOM}
+              textAnchor="middle"
+              dominantBaseline="hanging"
+              fontSize={11}
+              fill="#facc15"
+              fontFamily="Raleway, -apple-system, BlinkMacSystemFont, sans-serif"
+            >
+              {nextEvent.shortLabel}
+            </text>
+            {/* Next event HH:MM below label */}
+            <text
+              x={nextSlotCenterX}
+              y={LABEL_Y_BOTTOM + 13}
+              textAnchor="middle"
+              dominantBaseline="hanging"
+              fontSize={10}
+              fill="#facc15"
+              fontFamily="Raleway, -apple-system, BlinkMacSystemFont, sans-serif"
+            >
+              {fmtHHMM(nextEvent.date)}
+            </text>
+          </g>
+        )}
       </svg>
 
       {/* Next event countdown pill */}

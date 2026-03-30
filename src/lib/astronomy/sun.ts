@@ -72,8 +72,15 @@ export type SunTimes = {
  * @param rising    true = rising, false = setting
  */
 function sunCrossing(latDeg: number, lonDeg: number, date: Date, targetAlt: number, rising: boolean): Date | null {
-  const dayStart = new Date(date);
-  dayStart.setUTCHours(0, 0, 0, 0);
+  // Use approximate local solar midnight as the scan start, so western timezones
+  // (e.g. UTC-10) whose sunset falls past UTC midnight are not missed.
+  const utcDecimalHours =
+    date.getUTCHours() +
+    date.getUTCMinutes() / 60 +
+    date.getUTCSeconds() / 3600 +
+    date.getUTCMilliseconds() / 3600000;
+  const solarHourOfDay = ((utcDecimalHours + lonDeg / 15) % 24 + 24) % 24;
+  const dayStart = new Date(date.getTime() - solarHourOfDay * 3600000);
 
   const STEPS = 288; // 5-min buckets
   const stepMs = 86400000 / STEPS;

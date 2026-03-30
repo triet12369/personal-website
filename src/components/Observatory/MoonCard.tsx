@@ -1,6 +1,6 @@
-import { Skeleton, Text } from '@mantine/core';
+import { Skeleton, Slider, Text } from '@mantine/core';
 import dynamic from 'next/dynamic';
-import React, { FC } from 'react';
+import React, { FC, useState } from 'react';
 
 import { moonPhase, moonAltAz, moonRiseSet, nextMoonPhases } from '../../lib/astronomy/moon';
 import { MoonTimeline } from './MoonTimeline';
@@ -8,9 +8,11 @@ import { useT } from '../../hooks/useT';
 import type { Location } from './LocationSelector';
 import styles from './Observatory.module.scss';
 
+const ENABLE_DEBUG_SLIDER = false;
+
 const MoonPhaseWebGL = dynamic(
   () => import('./MoonPhaseWebGL').then((m) => m.MoonPhaseWebGL),
-  { ssr: false, loading: () => <Skeleton height={200} circle /> },
+  { ssr: false, loading: () => <Skeleton height={"100%"} circle /> },
 );
 
 type Props = {
@@ -30,6 +32,8 @@ export const MoonCard: FC<Props> = ({ location, date }) => {
   const { moonrise, moonset } = moonRiseSet(location.lat, location.lon, date);
   const next = nextMoonPhases(date);
 
+  const [debugAngle, setDebugAngle] = useState<number | null>(null);
+  const activeAngle = debugAngle ?? phase.angle;
   const illumPct = (phase.illumination * 100).toFixed(0);
 
   return (
@@ -38,7 +42,7 @@ export const MoonCard: FC<Props> = ({ location, date }) => {
       <div className={styles.moonLayout}>
         {/* Left: WebGL moon — fills column */}
         <div className={styles.moonImageCol}>
-          <MoonPhaseWebGL phaseAngle={phase.angle} />
+          <MoonPhaseWebGL phaseAngle={activeAngle} latitude={location.lat} debug={ENABLE_DEBUG_SLIDER} />
         </div>
 
         {/* Right: metadata row */}
@@ -68,6 +72,40 @@ export const MoonCard: FC<Props> = ({ location, date }) => {
 
       {/* Next phases timeline — full width below */}
       <MoonTimeline next={next} now={date} />
+
+      {/* Debug: phase angle slider */}
+      {ENABLE_DEBUG_SLIDER && (
+        <div style={{ marginTop: 12 }}>
+          <Text size="xs" c="dimmed" mb={4}>
+            Debug phase angle: {activeAngle.toFixed(1)}°
+            {debugAngle === null ? ' (live)' : ' (override)'}
+          </Text>
+          <Slider
+            min={0}
+          max={359}
+          step={1}
+          value={Math.round(activeAngle)}
+          onChange={setDebugAngle}
+          marks={[
+            { value: 0, label: 'New' },
+            { value: 90, label: '1Q' },
+            { value: 180, label: 'Full' },
+            { value: 270, label: '3Q' },
+          ]}
+          styles={{ markLabel: { fontSize: 10 } }}
+        />
+        {debugAngle !== null && (
+          <Text
+            size="xs"
+            c="blue"
+            style={{ cursor: 'pointer', marginTop: 6, display: 'inline-block' }}
+            onClick={() => setDebugAngle(null)}
+          >
+            ↩ reset to live
+          </Text>
+        )}
+      </div>
+      )}
     </div>
   );
 };
