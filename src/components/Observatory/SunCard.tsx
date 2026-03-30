@@ -97,7 +97,7 @@ export const SunCard: FC<Props> = ({ location, date }) => {
 
       <div className={styles.card}>
         <div className={styles.cardTitle}>{t('observatory.sunTitle')}</div>
-        <Stack gap="sm" align="stretch">
+        <Stack gap="sm" align="stretch" style={{ minWidth: 0 }}>
           <SunImage view={view} />
 
           {/* View switcher */}
