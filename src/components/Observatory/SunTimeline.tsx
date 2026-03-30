@@ -239,10 +239,16 @@ export const SunTimeline: FC<Props> = ({ times, now }) => {
 
   // If showing the break zone, shrink the main timeline area
   const mainWidth = showBreakZone ? Math.max(80, width - RESERVED_RIGHT - BREAK_WIDTH) : width;
-  const breakX = mainWidth;
-  const nextSlotCenterX = breakX + BREAK_WIDTH + RESERVED_RIGHT / 2;
+  // // symbol sits right at mainWidth (the natural clip edge), next-event slot fills the rest
+  const breakEndX = mainWidth + BREAK_WIDTH;
+  const nextSlotCenterX = (breakEndX + width) / 2;
 
-  // Zone color for the reserved slot
+  // Zone colors for the reserved slot
+  // currentZoneColor: what's active right now (fills break gap up to the next-event tick)
+  // nextSlotZoneColor: what starts AT the next event (fills after the tick)
+  const currentZoneColor = showBreakZone
+    ? getZoneColorAtMinute(times, nowMinutes)
+    : ZONE_COLORS.night;
   const nextSlotZoneColor = showBreakZone && nextEvent
     ? getZoneColorAtMinute(times, nextEvent.minutes)
     : ZONE_COLORS.night;
@@ -351,31 +357,40 @@ export const SunTimeline: FC<Props> = ({ times, now }) => {
         {/* ── Break indicator + next-event slot ──────────────────── */}
         {showBreakZone && nextEvent && (
           <g>
-            {/* Zone bar in reserved slot */}
+            {/* Current zone bar: from breakEndX → nextSlotCenterX (before the tick) */}
             <rect
-              x={breakX + BREAK_WIDTH}
+              x={breakEndX}
               y={ZONE_Y}
-              width={RESERVED_RIGHT}
+              width={Math.max(0, nextSlotCenterX - breakEndX)}
+              height={ZONE_HEIGHT}
+              fill={currentZoneColor}
+              rx={4}
+            />
+            {/* Next zone bar: from nextSlotCenterX → width (after the tick) */}
+            <rect
+              x={nextSlotCenterX}
+              y={ZONE_Y}
+              width={Math.max(0, width - nextSlotCenterX)}
               height={ZONE_HEIGHT}
               fill={nextSlotZoneColor}
               rx={4}
             />
-            {/* Break lines ( // ) between main window and reserved slot */}
+            {/* Break lines ( || ) right at mainWidth — the natural zone gap */}
             <line
-              x1={breakX + 5}
-              y1={TICK_TOP}
-              x2={breakX + 3}
-              y2={TICK_BOTTOM}
-              stroke="rgba(255,255,255,0.35)"
+              x1={mainWidth + 6}
+              y1={TICK_TOP + 6}
+              x2={mainWidth + 6}
+              y2={TICK_BOTTOM - 6}
+              stroke="rgba(255,255,255,0.55)"
               strokeWidth={1.5}
               strokeLinecap="round"
             />
             <line
-              x1={breakX + 13}
-              y1={TICK_TOP}
-              x2={breakX + 11}
-              y2={TICK_BOTTOM}
-              stroke="rgba(255,255,255,0.35)"
+              x1={mainWidth + 14}
+              y1={TICK_TOP + 6}
+              x2={mainWidth + 14}
+              y2={TICK_BOTTOM - 6}
+              stroke="rgba(255,255,255,0.55)"
               strokeWidth={1.5}
               strokeLinecap="round"
             />
