@@ -26,7 +26,7 @@ export const STAR_GLOW_FACTOR       = 3;
 export const STAR_TWINKLE_SPEED_MIN = 12;
 export const STAR_TWINKLE_SPEED_MAX = 24;
 /** ±alpha swing during a burst. */
-export const STAR_TWINKLE_AMPLITUDE = 0.4;
+export const STAR_TWINKLE_AMPLITUDE = 0.2;
 /** Per-second probability that a resting star starts a twinkle burst. */
 export const STAR_TWINKLE_CHANCE    = 0.2;
 /** Number of full sine cycles per burst before the star goes back to rest. */

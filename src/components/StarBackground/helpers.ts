@@ -21,23 +21,26 @@ export function rand(min: number, max: number): number {
 }
 
 // ─── Star spectral colors ─────────────────────────────────────────────────────
-// No green; weighted toward white/blue-white.
-// Weights: white 55%, blue-white 20%, yellow-white 10%, yellow 7%, orange 5%, red 3%
+// One entry per OBAFGKM spectral class. Weights are derived from the Yale
+// Bright Star Catalogue (all naked-eye stars, ~9 000 entries), which reflects
+// the visibility-weighted distribution a real observer would see:
+//   O ≈ 0.4 %  B ≈ 14.6 %  A ≈ 27.3 %  F ≈ 20.4 %  G ≈ 16.4 %  K ≈ 17.1 %  M ≈ 3.9 %
+// Colors are approximate blackbody chromaticities for each class.
 
+// Each color is lerped ~30% toward its perceived luminance gray to simulate
+// mild atmospheric desaturation (scintillation + dispersion whitening).
 const STAR_COLORS: Array<[number, number, number]> = [
-  [220, 230, 255], // blue-white (O/B type)
-  [200, 215, 255], // blue-white variant
-  [255, 255, 255], // pure white (A type)
-  [240, 240, 255], // white with slight blue
-  [255, 255, 240], // white with slight yellow
-  [255, 250, 210], // yellow-white (F type)
-  [255, 240, 160], // yellow (G type)
-  [255, 200, 100], // orange (K type)
-  [255, 160, 100], // orange-red
-  [255, 120, 100], // red (M type)
+  [162, 178, 255], // O  — ~30 000–50 000 K  intense blue
+  [191, 207, 255], // B  — ~10 000–30 000 K  blue-white
+  [222, 232, 255], // A  —  ~7 500–10 000 K  white with blue tint
+  [255, 251, 225], // F  —  ~6 000– 7 500 K  yellow-white
+  [255, 241, 181], // G  —  ~5 200– 6 000 K  yellow (solar)
+  [255, 205, 132], // K  —  ~3 700– 5 200 K  orange
+  [255, 143, 124], // M  —  ~2 400– 3 700 K  red
 ];
 
-const STAR_COLOR_WEIGHTS = [18, 15, 12, 10, 10, 10, 7, 5, 2, 1];
+//                          O   B   A   F   G   K   M
+const STAR_COLOR_WEIGHTS = [ 1, 15, 27, 20, 16, 17,  4];
 const STAR_COLOR_TOTAL   = STAR_COLOR_WEIGHTS.reduce((a, b) => a + b, 0);
 
 export function pickStarColor(): [number, number, number] {
@@ -51,9 +54,15 @@ export function pickStarColor(): [number, number, number] {
 
 // ─── Factory functions ────────────────────────────────────────────────────────
 
+// Minimum alpha for the log-uniform brightness distribution.
+const STAR_ALPHA_MIN = 0.4;
+
 export function makeStars(count: number, w: number, h: number, maxAlpha: number): Star[] {
   return Array.from({ length: count }, () => {
-    const baseAlpha = rand(0.85, maxAlpha);
+    // Log-uniform distribution: equal star counts per magnitude interval.
+    // Models the fact that faint stars vastly outnumber bright ones (N ∝ f^-3/2).
+    const minA = Math.min(STAR_ALPHA_MIN, maxAlpha);
+    const baseAlpha = minA * Math.pow(maxAlpha / minA, Math.random());
     return {
       x:            rand(0, w),
       y:            rand(0, h),
