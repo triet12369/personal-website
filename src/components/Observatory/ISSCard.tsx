@@ -120,7 +120,7 @@ export const ISSCard: FC<Props> = ({ location, date }) => {
             <span className={styles.issPosition}>
               {t('observatory.issLat')}: {position.lat.toFixed(2)}° ·{' '}
               {t('observatory.issLon')}: {position.lon.toFixed(2)}° ·{' '}
-              Alt: {position.alt.toFixed(0)} km
+              {tStr('observatory.altitude')}: {position.alt.toFixed(0)} km
             </span>
           )}
 
@@ -139,7 +139,7 @@ export const ISSCard: FC<Props> = ({ location, date }) => {
                       </Text>
                     </div>
                     <Badge color="cyan" variant="light">
-                      Max {p.maxElevation.toFixed(0)}°
+                      {tStr('observatory.issMax')} {p.maxElevation.toFixed(0)}°
                     </Badge>
                   </Group>
                   <Text size="xs" c="dimmed" mt={4}>

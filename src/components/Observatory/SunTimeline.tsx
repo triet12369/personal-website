@@ -11,6 +11,7 @@
  */
 
 import React, { FC, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { SunTimes } from '../../lib/astronomy/sun';
 import styles from './Observatory.module.scss';
@@ -67,17 +68,6 @@ type Event = {
   shortLabel: string;
   minutes: number;
   date: Date;
-};
-
-const SHORT: Record<string, string> = {
-  astronomicalDawn: 'Astro Dawn',
-  nauticalDawn: 'Naut Dawn',
-  civilDawn: 'Civil Dawn',
-  sunrise: 'Sunrise',
-  sunset: 'Sunset',
-  civilDusk: 'Civil Dusk',
-  nauticalDusk: 'Naut Dusk',
-  astronomicalDusk: 'Astro Dusk',
 };
 
 // Returns x position (0–1) for a given minute-of-day in the 24h tape,
@@ -139,9 +129,21 @@ function buildZones(
 }
 
 export const SunTimeline: FC<Props> = ({ times, now }) => {
+  const { t: tStr } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(300);
   const [, forceUpdate] = useState(0);
+
+  const SHORT: Record<string, string> = {
+    astronomicalDawn: tStr('observatory.sunShortAstroDawn'),
+    nauticalDawn: tStr('observatory.sunShortNautDawn'),
+    civilDawn: tStr('observatory.sunShortCivilDawn'),
+    sunrise: tStr('observatory.sunrise'),
+    sunset: tStr('observatory.sunset'),
+    civilDusk: tStr('observatory.sunShortCivilDusk'),
+    nauticalDusk: tStr('observatory.sunShortNautDusk'),
+    astronomicalDusk: tStr('observatory.sunShortAstroDusk'),
+  };
 
   // Observe container width
   useEffect(() => {
@@ -280,12 +282,12 @@ export const SunTimeline: FC<Props> = ({ times, now }) => {
       {/* Next event countdown pill */}
       {nextEvent && (
         <div className={styles.sunNextEventPill}>
-          <span className={styles.sunNextLabel}>Next</span>
+          <span className={styles.sunNextLabel}>{tStr('observatory.next')}</span>
           <span className={styles.sunNextName}>{nextEvent.shortLabel}</span>
           <span className={styles.sunNextTime}>{fmtHHMM(nextEvent.date)}</span>
           {fmtCountdown(nextEvent.date.getTime() - nowMs) && (
             <span className={styles.sunNextCountdown}>
-              in {fmtCountdown(nextEvent.date.getTime() - nowMs)}
+              {tStr('observatory.in')} {fmtCountdown(nextEvent.date.getTime() - nowMs)}
             </span>
           )}
         </div>

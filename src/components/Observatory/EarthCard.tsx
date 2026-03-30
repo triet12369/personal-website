@@ -4,6 +4,7 @@ import React, { FC, useEffect, useRef, useState } from 'react';
 
 import { getSatelliteImage, getSatelliteImageBySat, SatelliteEarthData, SatKey } from '../../lib/satelliteEarth';
 import { useT } from '../../hooks/useT';
+import { useTranslation } from 'react-i18next';
 import type { Location } from './LocationSelector';
 import styles from './Observatory.module.scss';
 
@@ -14,14 +15,15 @@ type Props = {
 
 const REFRESH_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
 
-const ALL_SATS: Array<{ key: SatKey; label: string }> = [
-  { key: 'GOES19', label: 'GOES-19 (East)' },
-  { key: 'GOES18', label: 'GOES-18 (West)' },
-  { key: 'Himawari9', label: 'Himawari-9' },
+const ALL_SATS_KEYS: Array<{ key: SatKey; labelKey: string }> = [
+  { key: 'GOES19', labelKey: 'observatory.satGOES19' },
+  { key: 'GOES18', labelKey: 'observatory.satGOES18' },
+  { key: 'Himawari9', labelKey: 'observatory.satHimawari9' },
 ];
 
 // Individual tile shown in the all-satellites modal
 function SatTile({ satKey, label }: { satKey: SatKey; label: string }) {
+  const { t: tStr } = useTranslation();
   const [data, setData] = useState<SatelliteEarthData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -62,7 +64,7 @@ function SatTile({ satKey, label }: { satKey: SatKey; label: string }) {
         />
       ) : (
         <div style={{ width: '100%', aspectRatio: '1/1', background: '#111', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Text size="xs" c="dimmed">Unavailable</Text>
+          <Text size="xs" c="dimmed">{tStr('observatory.satUnavailable')}</Text>
         </div>
       )}
 
@@ -87,6 +89,8 @@ function SatTile({ satKey, label }: { satKey: SatKey; label: string }) {
 
 export const EarthCard: FC<Props> = ({ location }) => {
   const t = useT();
+  const { t: tStr } = useTranslation();
+  const ALL_SATS = ALL_SATS_KEYS.map(({ key, labelKey }) => ({ key, label: tStr(labelKey) }));
   const [opened, { open, close }] = useDisclosure(false);
   const [data, setData] = useState<SatelliteEarthData | null>(null);
   const [loading, setLoading] = useState(true);

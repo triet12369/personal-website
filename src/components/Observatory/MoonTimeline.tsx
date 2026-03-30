@@ -4,6 +4,7 @@
  */
 
 import React, { FC, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { NextMoonPhases } from '../../lib/astronomy/moon';
 import styles from './Observatory.module.scss';
@@ -59,6 +60,7 @@ function fmtCountdown(diffMs: number): string {
 }
 
 export const MoonTimeline: FC<Props> = ({ next, now }) => {
+  const { t: tStr } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(300);
   const [, forceUpdate] = useState(0);
@@ -79,10 +81,10 @@ export const MoonTimeline: FC<Props> = ({ next, now }) => {
   }, []);
 
   const phases = [
-    { key: 'new', label: 'New Moon', date: next.nextNew },
-    { key: 'firstQuarter', label: '1st Quarter', date: next.nextFirstQuarter },
-    { key: 'full', label: 'Full Moon', date: next.nextFull },
-    { key: 'thirdQuarter', label: '3rd Quarter', date: next.nextThirdQuarter },
+    { key: 'new', label: tStr('observatory.newMoon'), date: next.nextNew },
+    { key: 'firstQuarter', label: tStr('observatory.firstQuarter'), date: next.nextFirstQuarter },
+    { key: 'full', label: tStr('observatory.fullMoon'), date: next.nextFull },
+    { key: 'thirdQuarter', label: tStr('observatory.thirdQuarter'), date: next.nextThirdQuarter },
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
   const nextPhase = phases[0];
@@ -172,12 +174,12 @@ export const MoonTimeline: FC<Props> = ({ next, now }) => {
       {/* Next phase countdown pill */}
       {nextPhase && (
         <div className={styles.sunNextEventPill}>
-          <span className={styles.sunNextLabel}>Next</span>
+          <span className={styles.sunNextLabel}>{tStr('observatory.next')}</span>
           <span className={styles.sunNextName}>{nextPhase.label}</span>
           <span className={styles.sunNextTime}>{fmtDate(nextPhase.date)}</span>
           {fmtCountdown(nextPhase.date.getTime() - now.getTime()) && (
             <span className={styles.sunNextCountdown}>
-              in {fmtCountdown(nextPhase.date.getTime() - now.getTime())}
+              {tStr('observatory.in')} {fmtCountdown(nextPhase.date.getTime() - now.getTime())}
             </span>
           )}
         </div>

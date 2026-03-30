@@ -5,8 +5,10 @@
  */
 
 import React, { FC, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export const SunImage: FC = () => {
+  const { t: tStr } = useTranslation();
   const [bust, setBust] = useState(() => Math.floor(Date.now() / (15 * 60 * 1000)));
 
   useEffect(() => {
@@ -19,7 +21,7 @@ export const SunImage: FC = () => {
   return (
     <img
       src={`/api/sdo-image?t=${bust}`}
-      alt="SOHO HMI Intensitygram — live solar image"
+      alt={tStr('observatory.sunImageAlt')}
       style={{ width: '100%', display: 'block', borderRadius: 'var(--mantine-radius-md)' }}
     />
   );
