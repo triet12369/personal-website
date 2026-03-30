@@ -1,5 +1,5 @@
 import {
-  STAR_RADIUS_MIN, STAR_RADIUS_MAX,
+  STAR_RADIUS_MIN, STAR_RADIUS_MAX, STAR_RADIUS_EXPONENT,
   STAR_TWINKLE_SPEED_MIN, STAR_TWINKLE_SPEED_MAX,
   SHOOT_ANGLE_MIN, SHOOT_ANGLE_MAX,
   SHOOT_SPEED_MIN, SHOOT_SPEED_MAX,
@@ -57,7 +57,7 @@ export function makeStars(count: number, w: number, h: number, maxAlpha: number)
     return {
       x:            rand(0, w),
       y:            rand(0, h),
-      r:            rand(STAR_RADIUS_MIN, STAR_RADIUS_MAX),
+      r:            STAR_RADIUS_MIN + (STAR_RADIUS_MAX - STAR_RADIUS_MIN) * Math.pow(Math.random(), STAR_RADIUS_EXPONENT),
       baseAlpha,
       alpha:        baseAlpha,
       twinkleSpeed:  rand(STAR_TWINKLE_SPEED_MIN, STAR_TWINKLE_SPEED_MAX),

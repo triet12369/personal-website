@@ -3,7 +3,7 @@ import React, { useEffect, useRef } from 'react';
 
 import styles from './StarBackground.module.scss';
 import {
-  STAR_DENSITY, STAR_COUNT_MAX, STAR_TWINKLE_AMPLITUDE, STAR_TWINKLE_CHANCE, STAR_TWINKLE_BURST_CYCLES,
+  STAR_DENSITY, STAR_COUNT_MAX, STAR_GLOW_FACTOR, STAR_TWINKLE_AMPLITUDE, STAR_TWINKLE_CHANCE, STAR_TWINKLE_BURST_CYCLES,
   SHOOT_MAX_COUNT, SHOOT_SPAWN_INTERVAL, SHOOT_SPAWN_CHANCE,
   SHOOT_FADE_IN, SHOOT_FADE_OUT, SHOOT_GLOW_RADIUS, SHOOT_LINE_WIDTH,
   EXPLOSION_PARTICLE_COUNT,
@@ -120,13 +120,15 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
     };
     // Nebula program locations cached once (looked up every frame otherwise)
     const nLoc = nebulaProg ? {
-      pos:     gl.getAttribLocation(nebulaProg,  'a_pos'),
-      nebula:  gl.getUniformLocation(nebulaProg, 'u_nebula')!,
-      opacity: gl.getUniformLocation(nebulaProg, 'u_opacity')!,
-      light:   gl.getUniformLocation(nebulaProg, 'u_light')!,
-      w0:      gl.getUniformLocation(nebulaProg, 'u_w0')!,
-      w1:      gl.getUniformLocation(nebulaProg, 'u_w1')!,
-      w2:      gl.getUniformLocation(nebulaProg, 'u_w2')!,
+      pos:      gl.getAttribLocation(nebulaProg,  'a_pos'),
+      nebula:   gl.getUniformLocation(nebulaProg, 'u_nebula')!,
+      opacity:  gl.getUniformLocation(nebulaProg, 'u_opacity')!,
+      light:    gl.getUniformLocation(nebulaProg, 'u_light')!,
+      w0:       gl.getUniformLocation(nebulaProg, 'u_w0')!,
+      w1:       gl.getUniformLocation(nebulaProg, 'u_w1')!,
+      w2:       gl.getUniformLocation(nebulaProg, 'u_w2')!,
+      uvOffset: gl.getUniformLocation(nebulaProg, 'u_uv_offset')!,
+      uvScale:  gl.getUniformLocation(nebulaProg, 'u_uv_scale')!,
     } : null;
 
     // Randomly assign S II / O III prominence — H-α always wins.
@@ -271,6 +273,26 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
         if (nebulaTex) {
           gl.useProgram(nebulaProg);
 
+          // Cover-crop UV: preserve texture aspect ratio, center-crop the overflow.
+          const texW = nebulaRef.current.nebula!.width;
+          const texH = nebulaRef.current.nebula!.height;
+          const canvasAR  = w / h;
+          const textureAR = texW / texH;
+          let uvScaleX: number, uvScaleY: number, uvOffX: number, uvOffY: number;
+          if (canvasAR >= textureAR) {
+            // Canvas is wider — texture fills width, crop height
+            uvScaleX = 1.0;
+            uvScaleY = textureAR / canvasAR;
+            uvOffX   = 0.0;
+            uvOffY   = (1.0 - uvScaleY) / 2.0;
+          } else {
+            // Canvas is taller — texture fills height, crop width
+            uvScaleY = 1.0;
+            uvScaleX = canvasAR / textureAR;
+            uvOffY   = 0.0;
+            uvOffX   = (1.0 - uvScaleX) / 2.0;
+          }
+
           // Bind packed texture to TEXTURE0
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, nebulaTex);
@@ -280,6 +302,8 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
           gl.uniform1f(nLoc.w0, nebulaW0);
           gl.uniform1f(nLoc.w1, nebulaW1);
           gl.uniform1f(nLoc.w2, nebulaW2);
+          gl.uniform2f(nLoc.uvOffset, uvOffX, uvOffY);
+          gl.uniform2f(nLoc.uvScale,  uvScaleX, uvScaleY);
 
           gl.bindBuffer(gl.ARRAY_BUFFER, nebulaQuadBuf);
           gl.enableVertexAttribArray(nLoc.pos);
@@ -326,7 +350,7 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
         ptData[b + 3] = sg;
         ptData[b + 4] = sb;
         ptData[b + 5] = s.alpha;
-        ptData[b + 6] = s.r * 2;
+        ptData[b + 6] = s.r * STAR_GLOW_FACTOR * 2;
         sn++;
       }
       drawPoints(ptData, sn);

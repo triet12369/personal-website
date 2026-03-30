@@ -3,7 +3,7 @@ import React, { useEffect, useRef } from 'react';
 
 import styles from './StarBackground.module.scss';
 import {
-  STAR_DENSITY, STAR_COUNT_MAX, STAR_TWINKLE_AMPLITUDE, STAR_TWINKLE_CHANCE, STAR_TWINKLE_BURST_CYCLES,
+  STAR_DENSITY, STAR_COUNT_MAX, STAR_GLOW_FACTOR, STAR_TWINKLE_AMPLITUDE, STAR_TWINKLE_CHANCE, STAR_TWINKLE_BURST_CYCLES,
   SHOOT_MAX_COUNT, SHOOT_SPAWN_INTERVAL, SHOOT_SPAWN_CHANCE,
   SHOOT_FADE_IN, SHOOT_FADE_OUT, SHOOT_GLOW_RADIUS, SHOOT_LINE_WIDTH,
   EXPLOSION_RING_EXPAND, EXPLOSION_RING_FADE,
@@ -206,7 +206,24 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
           }
           const opacity = isDark ? NEBULA_OPACITY : NEBULA_OPACITY_LIGHT;
           c.globalAlpha = opacity;
-          c.drawImage(nebulaComposed, 0, 0, w, h);
+          // Cover-crop: preserve texture aspect ratio, center-crop the overflow.
+          const texW = nebulaComposed.width;
+          const texH = nebulaComposed.height;
+          const canvasAR  = w / h;
+          const textureAR = texW / texH;
+          let sx: number, sy: number, sw: number, sh: number;
+          if (canvasAR >= textureAR) {
+            sw = texW;
+            sh = texW / canvasAR;
+            sx = 0;
+            sy = (texH - sh) / 2;
+          } else {
+            sh = texH;
+            sw = texH * canvasAR;
+            sy = 0;
+            sx = (texW - sw) / 2;
+          }
+          c.drawImage(nebulaComposed, sx, sy, sw, sh, 0, 0, w, h);
           c.globalAlpha = 1;
         }
       }
@@ -232,11 +249,21 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
           }
         }
 
+        const glowR = s.r * STAR_GLOW_FACTOR;
+        const grad  = c.createRadialGradient(s.x, s.y, 0, s.x, s.y, glowR);
+        if (isDark) {
+          const [cr, cg, cb] = s.color;
+          grad.addColorStop(0,    `rgba(${cr},${cg},${cb},${s.alpha})`);
+          grad.addColorStop(0.50, `rgba(${cr},${cg},${cb},${(s.alpha * 0.6).toFixed(3)}`);
+          grad.addColorStop(1,    `rgba(${cr},${cg},${cb},0)`);
+        } else {
+          grad.addColorStop(0,    palette.starColor(s.alpha));
+          grad.addColorStop(0.50, palette.starColor(s.alpha * 0.6));
+          grad.addColorStop(1,    palette.starColor(0));
+        }
         c.beginPath();
-        c.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        c.fillStyle = isDark
-          ? `rgba(${s.color[0]},${s.color[1]},${s.color[2]},${s.alpha})`
-          : palette.starColor(s.alpha);
+        c.arc(s.x, s.y, glowR, 0, Math.PI * 2);
+        c.fillStyle = grad;
         c.fill();
       }
 
