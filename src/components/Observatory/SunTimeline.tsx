@@ -118,11 +118,20 @@ function minuteToX(
 // Build ordered list of zone fill rects from event times
 function buildZones(
   times: SunTimes,
-  nowMinutes: number,
+  nowMs: number,
   containerWidth: number,
 ): Array<{ x: number; width: number; color: string }> {
-  const events: Array<{ minutes: number; phase: string }> = [
-    { minutes: 0, phase: 'night' },
+  const pxPerMinute = containerWidth / (VISIBLE_HOURS * 60);
+
+  // Do NOT anchor to UTC midnight — for eastern-timezone users, sunCrossing
+  // returns dawn events before UTC midnight and dusk events after it, so a
+  // midnight 'night' boundary would land in the middle of the day zone.
+  // Instead use ±24h bookends and let the actual event timestamps drive
+  // every zone transition.
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const boundaries: Array<{ ms: number; phase: string }> = [
+    { ms: nowMs - DAY_MS, phase: 'night' },
+    { ms: nowMs + DAY_MS, phase: 'night' },
   ];
 
   const map: Array<[keyof SunTimes, string]> = [
@@ -137,24 +146,20 @@ function buildZones(
   ];
 
   for (const [key, phase] of map) {
-    const m = minutesOfDay(times[key]);
-    if (m !== null) events.push({ minutes: m, phase });
+    const d = times[key];
+    if (d != null) boundaries.push({ ms: d.getTime(), phase });
   }
 
-  // Close out at end of day
-  events.push({ minutes: 24 * 60, phase: 'night' });
-
-  // Sort by time
-  events.sort((a, b) => a.minutes - b.minutes);
+  boundaries.sort((a, b) => a.ms - b.ms);
 
   const zones: Array<{ x: number; width: number; color: string }> = [];
-  for (let i = 0; i < events.length - 1; i++) {
-    const x1 = minuteToX(events[i].minutes, nowMinutes, containerWidth);
-    const x2 = minuteToX(events[i + 1].minutes, nowMinutes, containerWidth);
+  for (let i = 0; i < boundaries.length - 1; i++) {
+    const deltaMin1 = (boundaries[i].ms - nowMs) / 60000;
+    const deltaMin2 = (boundaries[i + 1].ms - nowMs) / 60000;
     zones.push({
-      x: x1,
-      width: x2 - x1,
-      color: ZONE_COLORS[events[i].phase as keyof typeof ZONE_COLORS] ?? ZONE_COLORS.night,
+      x: CURSOR_FRACTION * containerWidth + deltaMin1 * pxPerMinute,
+      width: (deltaMin2 - deltaMin1) * pxPerMinute,
+      color: ZONE_COLORS[boundaries[i].phase as keyof typeof ZONE_COLORS] ?? ZONE_COLORS.night,
     });
   }
 
@@ -256,7 +261,7 @@ export const SunTimeline: FC<Props> = ({ times, now }) => {
     : ZONE_COLORS.night;
 
   // Always compute positions using the full width so the cursor stays fixed.
-  const zones = buildZones(times, nowMinutes, width);
+  const zones = buildZones(times, nowMs, width);
 
   // Only render events within the visible tape window
   const leftWindowMinutes = CURSOR_FRACTION * VISIBLE_HOURS * 60 + 60;
@@ -264,7 +269,7 @@ export const SunTimeline: FC<Props> = ({ times, now }) => {
     ? (clipRight / width) * VISIBLE_HOURS * 60 - CURSOR_FRACTION * VISIBLE_HOURS * 60
     : (1 - CURSOR_FRACTION) * VISIBLE_HOURS * 60 + 60;
   const visibleEvents = allEvents.filter((e) => {
-    const delta = e.minutes - nowMinutes;
+    const delta = (e.date.getTime() - nowMs) / 60000;
     return delta >= -leftWindowMinutes && delta < rightWindowMinutes;
   });
 
@@ -293,14 +298,14 @@ export const SunTimeline: FC<Props> = ({ times, now }) => {
               width={Math.max(0, z.width)}
               height={ZONE_HEIGHT}
               fill={z.color}
-              rx={4}
             />
           ))}
         </g>
 
         {/* Event ticks + labels */}
         {visibleEvents.map((ev, idx) => {
-          const x = minuteToX(ev.minutes, nowMinutes, width);
+          const deltaMin = (ev.date.getTime() - nowMs) / 60000;
+          const x = CURSOR_FRACTION * width + deltaMin * (width / (VISIBLE_HOURS * 60));
           const isNext = nextEvent?.key === ev.key;
           const labelBelow = idx % 2 === 1;
 
