@@ -80,7 +80,7 @@ export const EXPLOSION_PARTICLE_GRAVITY = 0.03;
 export const NEBULA_ENABLED     = true;
 
 /** Overall nebula layer opacity for dark mode (0–1). */
-export const NEBULA_OPACITY       = 1;
+export const NEBULA_OPACITY       = 0.6;
 
 /** Overall nebula layer opacity for light mode (0–1). */
 export const NEBULA_OPACITY_LIGHT = 0.45;
