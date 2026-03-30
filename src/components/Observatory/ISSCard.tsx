@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useT } from '../../hooks/useT';
 
 import { getSatrec, computeISSPosition, getISSGroundTrack, getISSPasses, azimuthToDirection, ISSPass, ISSPosition, GroundTrackPoint } from '../../lib/iss';
-import { sunAltAz } from '../../lib/astronomy/sun';
+import { sunSubSolarPoint } from '../../lib/astronomy/sun';
 import type { Location } from './LocationSelector';
 import styles from './Observatory.module.scss';
 
@@ -101,8 +101,9 @@ export const ISSCard: FC<Props> = ({ location, date }) => {
     return () => { if (rafRef.current !== null) cancelAnimationFrame(rafRef.current); };
   }, []);
 
-  // Sun direction for the 3D globe lighting
-  const sun = sunAltAz(location.lat, location.lon, date);
+  // Sun direction for the 3D globe lighting — always use real current time,
+  // not the user-controlled `date` prop, so the daylight terminator is absolute.
+  const subSolar = sunSubSolarPoint(now);
 
   return (
     <div className={styles.card}>
@@ -175,8 +176,8 @@ export const ISSCard: FC<Props> = ({ location, date }) => {
                   position={position}
                   track={track}
                   now={now}
-                  sunLat={sun.alt}
-                  sunLon={sun.az}
+                  sunLat={subSolar.lat}
+                  sunLon={subSolar.lon}
                 />
               )
             ) : (

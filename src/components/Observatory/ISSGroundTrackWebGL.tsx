@@ -44,7 +44,7 @@ export const ISSGroundTrackWebGL: FC<Props> = ({ position, track, now, sunLat = 
     pastLine: THREE.Line;
     futureLine: THREE.Line;
     frameId: number;
-    sunLight: THREE.DirectionalLight;
+    earthMat: THREE.ShaderMaterial;
   } | null>(null);
 
   // Initialize scene once
@@ -72,27 +72,71 @@ export const ISSGroundTrackWebGL: FC<Props> = ({ position, track, now, sunLat = 
     camera.position.copy(issDir.multiplyScalar(3));
     camera.lookAt(0, 0, 0);
 
-    // Ambient light
-    scene.add(new THREE.AmbientLight(0x333333));
-
-    // Sun directional light
-    const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    scene.add(sunLight);
-
-    // Earth sphere
+    // Earth sphere with custom day/night shader
     const geo = new THREE.SphereGeometry(1, 64, 32);
     const loader = new THREE.TextureLoader();
-    const texture = loader.load('/textures/earth.jpg');
-    const mat = new THREE.MeshPhongMaterial({ map: texture, shininess: 15 });
-    const earth = new THREE.Mesh(geo, mat);
+    const dayTex = loader.load('/textures/earth.jpg');
+
+    const earthMat = new THREE.ShaderMaterial({
+      uniforms: {
+        dayTexture:   { value: dayTex },
+        nightTexture: { value: new THREE.Texture() },
+        sunDir:       { value: new THREE.Vector3(1, 0, 0) },
+      },
+      vertexShader: /* glsl */`
+        varying vec2 vUv;
+        varying vec3 vWorldNormal;
+        void main() {
+          vUv = uv;
+          vWorldNormal = normalize(mat3(modelMatrix) * normal);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: /* glsl */`
+        uniform sampler2D dayTexture;
+        uniform sampler2D nightTexture;
+        uniform vec3 sunDir;
+        varying vec2 vUv;
+        varying vec3 vWorldNormal;
+        void main() {
+          vec3 N = normalize(vWorldNormal);
+          float NdotL = dot(N, sunDir);
+          // Soft terminator blend over ~25 degrees
+          float dayBlend = smoothstep(-0.1, 0.15, NdotL);
+          vec4 daySample   = texture2D(dayTexture,   vUv);
+          vec4 nightSample = texture2D(nightTexture, vUv);
+          // Day side: ambient base + diffuse
+          vec3 dayLit   = daySample.rgb   * (0.1 + 0.9 * max(NdotL, 0.0));
+          // Night side: downsampled city-lights dimmed
+          vec3 nightLit = nightSample.rgb * 0.7;
+          gl_FragColor = vec4(mix(nightLit, dayLit, dayBlend), 1.0);
+        }
+      `,
+    });
+
+    // Load + downsample night texture to 50 % via canvas
+    loader.load('/textures/earth_night.jpg', (tex) => {
+      const img = tex.image as HTMLImageElement;
+      const canvas = document.createElement('canvas');
+      canvas.width  = Math.max(1, Math.floor(img.width  * 0.5));
+      canvas.height = Math.max(1, Math.floor(img.height * 0.5));
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        earthMat.uniforms.nightTexture.value = new THREE.CanvasTexture(canvas);
+        tex.dispose();
+      }
+    });
+
+    const earth = new THREE.Mesh(geo, earthMat);
     scene.add(earth);
 
-    // Atmosphere glow
+    // Atmosphere glow (MeshBasicMaterial — unlit, always visible)
     const atmGeo = new THREE.SphereGeometry(1.015, 64, 32);
-    const atmMat = new THREE.MeshPhongMaterial({
+    const atmMat = new THREE.MeshBasicMaterial({
       color: 0x3399ff,
       transparent: true,
-      opacity: 0.08,
+      opacity: 0.06,
       side: THREE.FrontSide,
     });
     scene.add(new THREE.Mesh(atmGeo, atmMat));
@@ -152,7 +196,7 @@ export const ISSGroundTrackWebGL: FC<Props> = ({ position, track, now, sunLat = 
     };
     window.addEventListener('resize', handleResize);
 
-    sceneRef.current = { renderer, scene, camera, controls, issMarker, pastLine, futureLine, frameId, sunLight };
+    sceneRef.current = { renderer, scene, camera, controls, issMarker, pastLine, futureLine, frameId, earthMat };
 
     return () => {
       cancelAnimationFrame(frameId);
@@ -194,11 +238,11 @@ export const ISSGroundTrackWebGL: FC<Props> = ({ position, track, now, sunLat = 
     }
   }, [track]);
 
-  // Update sun light direction when sun position changes (per-minute)
+  // Update sun direction uniform when sub-solar point changes (per-minute)
   useEffect(() => {
     const s = sceneRef.current;
     if (!s) return;
-    s.sunLight.position.copy(latLonToVec3(sunLat, sunLon, 5));
+    s.earthMat.uniforms.sunDir.value = latLonToVec3(sunLat, sunLon, 1).normalize();
   }, [sunLat, sunLon]);
 
   return <div ref={mountRef} style={{ width: '100%', height: '100%' }} />;

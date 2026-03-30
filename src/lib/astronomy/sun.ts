@@ -4,7 +4,7 @@
  */
 
 import { dateToJD, j2000, DEG_TO_RAD, RAD_TO_DEG } from './julian';
-import { raDecToAltAz, AltAz } from './coordinates';
+import { raDecToAltAz, AltAz, greenwichSiderealTime } from './coordinates';
 
 export type SolarPosition = { ra: number; dec: number; distance: number };
 
@@ -53,6 +53,19 @@ export function solarPosition(date: Date): SolarPosition {
 export function sunAltAz(latDeg: number, lonDeg: number, date: Date): AltAz {
   const { ra, dec } = solarPosition(date);
   return raDecToAltAz(ra, dec, latDeg, lonDeg, dateToJD(date));
+}
+
+/**
+ * Geographic sub-solar point — the lat/lon on Earth's surface directly beneath the Sun.
+ * lat = solar declination (-90..+90), lon = sub-solar longitude (-180..+180).
+ */
+export function sunSubSolarPoint(date: Date): { lat: number; lon: number } {
+  const jd = dateToJD(date);
+  const { ra, dec } = solarPosition(date);
+  const gmst = greenwichSiderealTime(jd);
+  let lon = ((ra - gmst) % 360 + 360) % 360;
+  if (lon > 180) lon -= 360;
+  return { lat: dec, lon };
 }
 
 export type SunTimes = {
