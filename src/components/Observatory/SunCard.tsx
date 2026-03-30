@@ -1,9 +1,10 @@
-import { Modal, SimpleGrid, Skeleton, Stack, Text, Tooltip } from '@mantine/core';
+import { Anchor, Modal, SimpleGrid, Skeleton, Stack, Text, Tooltip } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import React, { FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { sunriseSunset, sunAltAz, skyState, SkyState } from '../../lib/astronomy/sun';
+import { buildStellariumUrl } from '../../lib/stellarium';
 import { useT } from '../../hooks/useT';
 import type { Location } from './LocationSelector';
 import styles from './Observatory.module.scss';
@@ -158,6 +159,17 @@ export const SunCard: FC<Props> = ({ location, date }) => {
           <Text size="sm" ta="center">
             <span className={styles.skyStateDot} data-state={state} />
             {t(STATE_LABEL_KEYS[state])} · Alt {altAz.alt.toFixed(1)}° Az {altAz.az.toFixed(1)}°
+            {' '}
+            <Anchor
+              href={buildStellariumUrl({ lat: location.lat, lng: location.lon, date, az: altAz.az, alt: altAz.alt, objectName: 'Sun', fov: 5 })}
+              target="_blank"
+              rel="noopener noreferrer"
+              size="xs"
+              title={tStr('observatory.viewInStellarium')}
+              style={{ opacity: 0.7, verticalAlign: 'middle' }}
+            >
+              🔭
+            </Anchor>
           </Text>
           <SunTimeline times={times} now={date} />
         </Stack>

@@ -7,6 +7,7 @@ import {
   getVisibleConstellations,
   getVisibleNebulae,
 } from '../../lib/astronomy/sky';
+import { buildStellariumUrl } from '../../lib/stellarium';
 import { useT } from '../../hooks/useT';
 import type { Location } from './LocationSelector';
 import styles from './Observatory.module.scss';
@@ -38,9 +39,11 @@ function wikiTitleFor(item: NonNullable<SelectedItem>): string {
 type DetailPageProps = {
   item: NonNullable<SelectedItem>;
   onBack: () => void;
+  location: Location;
+  date: Date;
 };
 
-const DetailPage: FC<DetailPageProps> = ({ item, onBack }) => {
+const DetailPage: FC<DetailPageProps> = ({ item, onBack, location, date }) => {
   const t = useT();
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [extract, setExtract] = useState<string | null>(null);
@@ -83,6 +86,19 @@ const DetailPage: FC<DetailPageProps> = ({ item, onBack }) => {
   const { name, altAz } = item.data;
   const catalogId = item.kind === 'constellation' ? item.data.abbr : item.data.id;
   const wikiUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(wikiTitleFor(item))}`;
+
+  const stellariumObjectName =
+    item.kind === 'constellation' ? item.data.name : item.data.id;
+  const stellariumFov = item.kind === 'constellation' ? 90 : 15;
+  const stellariumUrl = buildStellariumUrl({
+    lat: location.lat,
+    lng: location.lon,
+    date,
+    az: altAz.az,
+    alt: altAz.alt,
+    objectName: stellariumObjectName,
+    fov: stellariumFov,
+  });
 
   const typeEl =
     item.kind === 'constellation'
@@ -142,6 +158,16 @@ const DetailPage: FC<DetailPageProps> = ({ item, onBack }) => {
           >
             {t('observatory.viewOnWikipedia')}
           </Anchor>
+          <Anchor
+            href={stellariumUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            size="xs"
+            mt="xs"
+            display="block"
+          >
+            {t('observatory.viewInStellarium')}
+          </Anchor>
         </div>
       </div>
     </div>
@@ -159,7 +185,7 @@ export const NightSkyCard: FC<Props> = ({ location, date }) => {
   if (selectedItem) {
     return (
       <div className={styles.card}>
-        <DetailPage item={selectedItem} onBack={() => setSelectedItem(null)} />
+        <DetailPage item={selectedItem} onBack={() => setSelectedItem(null)} location={location} date={date} />
       </div>
     );
   }

@@ -1,7 +1,9 @@
-import { Stack, Text } from '@mantine/core';
+import { Anchor, Stack, Text } from '@mantine/core';
 import React, { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { getVisiblePlanets, PlanetInfo } from '../../lib/astronomy/planets';
+import { buildStellariumUrl } from '../../lib/stellarium';
 import { useT } from '../../hooks/useT';
 import type { Location } from './LocationSelector';
 import styles from './Observatory.module.scss';
@@ -28,6 +30,7 @@ const PLANET_SYMBOL: Record<string, string> = {
 
 export const PlanetsCard: FC<Props> = ({ location, date }) => {
   const t = useT();
+  const { t: tStr } = useTranslation();
   const planets = getVisiblePlanets(location.lat, location.lon, date);
 
   return (
@@ -40,7 +43,17 @@ export const PlanetsCard: FC<Props> = ({ location, date }) => {
             className={`${clsx(styles.planetRow, layoutStyles.contentBlur)} ${p.altAz.alt <= 0 ? styles.belowHorizon : ''}`}
           >
             <span className={styles.planetName}>
-              {PLANET_SYMBOL[p.name]} {p.name}
+              <Anchor
+                href={buildStellariumUrl({ lat: location.lat, lng: location.lon, date, az: p.altAz.az, alt: p.altAz.alt, objectName: p.name, fov: 20 })}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={tStr('observatory.viewInStellarium')}
+                style={{ color: 'inherit', textDecoration: 'none' }}
+                onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => { e.currentTarget.style.textDecoration = 'underline'; }}
+                onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => { e.currentTarget.style.textDecoration = 'none'; }}
+              >
+                {PLANET_SYMBOL[p.name]} {p.name}
+              </Anchor>
             </span>
             <span style={{ fontSize: '0.78rem' }}>
               {p.altAz.alt.toFixed(1)}° / {p.altAz.az.toFixed(1)}°

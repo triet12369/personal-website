@@ -1,10 +1,12 @@
-import { Skeleton, Slider, Text } from '@mantine/core';
+import { Anchor, Skeleton, Slider, Text } from '@mantine/core';
 import dynamic from 'next/dynamic';
 import React, { FC, useState } from 'react';
 
 import { moonPhase, moonAltAz, moonRiseSet, nextMoonPhases } from '../../lib/astronomy/moon';
+import { buildStellariumUrl } from '../../lib/stellarium';
 import { MoonTimeline } from './MoonTimeline';
 import { useT } from '../../hooks/useT';
+import { useTranslation } from 'react-i18next';
 import type { Location } from './LocationSelector';
 import styles from './Observatory.module.scss';
 
@@ -27,6 +29,7 @@ function fmt(d: Date | null): string {
 
 export const MoonCard: FC<Props> = ({ location, date }) => {
   const t = useT();
+  const { t: tStr } = useTranslation();
 
   // Timeline scrubbing: null = live (current date), otherwise overridden
   const [timelineDate, setTimelineDate] = useState<Date | null>(null);
@@ -74,6 +77,17 @@ export const MoonCard: FC<Props> = ({ location, date }) => {
           </div>
         </div>
       </div>
+
+      <Anchor
+        href={buildStellariumUrl({ lat: location.lat, lng: location.lon, date, az: altAz.az, alt: altAz.alt, objectName: 'Moon', fov: 5 })}
+        target="_blank"
+        rel="noopener noreferrer"
+        size="xs"
+        title={tStr('observatory.viewInStellarium')}
+        style={{ display: 'block', textAlign: 'center', opacity: 0.65, marginBottom: '0.25rem' }}
+      >
+        {tStr('observatory.viewInStellarium')} ↗
+      </Anchor>
 
       {/* Next phases timeline — full width below */}
       <MoonTimeline
