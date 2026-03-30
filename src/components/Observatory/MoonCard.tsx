@@ -45,92 +45,94 @@ export const MoonCard: FC<Props> = ({ location, date }) => {
   const illumPct = (phase.illumination * 100).toFixed(0);
 
   return (
-    <div className={styles.card}>
+    <div className={styles.card} style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
       <div className={styles.cardTitle}>{t('observatory.moonTitle')}</div>
-      <div className={styles.moonLayout}>
-        {/* Left: WebGL moon — fills column */}
-        <div className={styles.moonImageCol}>
-          <MoonPhaseWebGL phaseAngle={activeAngle} latitude={location.lat} debug={ENABLE_DEBUG_SLIDER} />
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
+        <div className={styles.moonLayout}>
+          {/* Left: WebGL moon — fills column */}
+          <div className={styles.moonImageCol}>
+            <MoonPhaseWebGL phaseAngle={activeAngle} latitude={location.lat} debug={ENABLE_DEBUG_SLIDER} />
+          </div>
+
+          {/* Right: metadata row */}
+          <div className={styles.moonMetaRow}>
+            <div className={styles.moonMetaItem}>
+              <Text fw={600} size="sm">{phase.name}</Text>
+              <Text size="xs" c="dimmed">{illumPct}% {t('observatory.illuminated')}</Text>
+            </div>
+            <div className={styles.moonMetaItem}>
+              <Text size="xs" c="dimmed">{t('observatory.altitude')}</Text>
+              <Text size="sm" fw={500}>{altAz.alt.toFixed(1)}°</Text>
+            </div>
+            <div className={styles.moonMetaItem}>
+              <Text size="xs" c="dimmed">{t('observatory.azimuth')}</Text>
+              <Text size="sm" fw={500}>{altAz.az.toFixed(1)}°</Text>
+            </div>
+            <div className={styles.moonMetaItem}>
+              <Text size="xs" c="dimmed">{t('observatory.moonrise')}</Text>
+              <Text size="sm" fw={500}>{fmt(moonrise)}</Text>
+            </div>
+            <div className={styles.moonMetaItem}>
+              <Text size="xs" c="dimmed">{t('observatory.moonset')}</Text>
+              <Text size="sm" fw={500}>{fmt(moonset)}</Text>
+            </div>
+          </div>
         </div>
 
-        {/* Right: metadata row */}
-        <div className={styles.moonMetaRow}>
-          <div className={styles.moonMetaItem}>
-            <Text fw={600} size="sm">{phase.name}</Text>
-            <Text size="xs" c="dimmed">{illumPct}% {t('observatory.illuminated')}</Text>
-          </div>
-          <div className={styles.moonMetaItem}>
-            <Text size="xs" c="dimmed">{t('observatory.altitude')}</Text>
-            <Text size="sm" fw={500}>{altAz.alt.toFixed(1)}°</Text>
-          </div>
-          <div className={styles.moonMetaItem}>
-            <Text size="xs" c="dimmed">{t('observatory.azimuth')}</Text>
-            <Text size="sm" fw={500}>{altAz.az.toFixed(1)}°</Text>
-          </div>
-          <div className={styles.moonMetaItem}>
-            <Text size="xs" c="dimmed">{t('observatory.moonrise')}</Text>
-            <Text size="sm" fw={500}>{fmt(moonrise)}</Text>
-          </div>
-          <div className={styles.moonMetaItem}>
-            <Text size="xs" c="dimmed">{t('observatory.moonset')}</Text>
-            <Text size="sm" fw={500}>{fmt(moonset)}</Text>
-          </div>
-        </div>
-      </div>
+        <Anchor
+          href={buildStellariumUrl({ lat: location.lat, lng: location.lon, date, az: altAz.az, alt: altAz.alt, objectName: 'Moon', fov: 5 })}
+          target="_blank"
+          rel="noopener noreferrer"
+          size="xs"
+          title={tStr('observatory.viewInStellarium')}
+          style={{ display: 'block', textAlign: 'center', opacity: 0.65, marginBottom: '0.25rem' }}
+        >
+          {tStr('observatory.viewInStellarium')} ↗
+        </Anchor>
 
-      <Anchor
-        href={buildStellariumUrl({ lat: location.lat, lng: location.lon, date, az: altAz.az, alt: altAz.alt, objectName: 'Moon', fov: 5 })}
-        target="_blank"
-        rel="noopener noreferrer"
-        size="xs"
-        title={tStr('observatory.viewInStellarium')}
-        style={{ display: 'block', textAlign: 'center', opacity: 0.65, marginBottom: '0.25rem' }}
-      >
-        {tStr('observatory.viewInStellarium')} ↗
-      </Anchor>
-
-      {/* Next phases timeline — full width below */}
-      <MoonTimeline
-        next={next}
-        now={date}
-        overrideDate={timelineDate}
-        onDateChange={setTimelineDate}
-        onReturnToNow={() => setTimelineDate(null)}
-      />
-
-      {/* Debug: phase angle slider */}
-      {ENABLE_DEBUG_SLIDER && (
-        <div style={{ marginTop: 12 }}>
-          <Text size="xs" c="dimmed" mb={4}>
-            Debug phase angle: {activeAngle.toFixed(1)}°
-            {debugAngle === null ? ' (live)' : ' (override)'}
-          </Text>
-          <Slider
-            min={0}
-          max={359}
-          step={1}
-          value={Math.round(activeAngle)}
-          onChange={setDebugAngle}
-          marks={[
-            { value: 0, label: 'New' },
-            { value: 90, label: '1Q' },
-            { value: 180, label: 'Full' },
-            { value: 270, label: '3Q' },
-          ]}
-          styles={{ markLabel: { fontSize: 10 } }}
+        {/* Next phases timeline — full width below */}
+        <MoonTimeline
+          next={next}
+          now={date}
+          overrideDate={timelineDate}
+          onDateChange={setTimelineDate}
+          onReturnToNow={() => setTimelineDate(null)}
         />
-        {debugAngle !== null && (
-          <Text
-            size="xs"
-            c="blue"
-            style={{ cursor: 'pointer', marginTop: 6, display: 'inline-block' }}
-            onClick={() => setDebugAngle(null)}
-          >
-            ↩ reset to live
-          </Text>
+
+        {/* Debug: phase angle slider */}
+        {ENABLE_DEBUG_SLIDER && (
+          <div style={{ marginTop: 12 }}>
+            <Text size="xs" c="dimmed" mb={4}>
+              Debug phase angle: {activeAngle.toFixed(1)}°
+              {debugAngle === null ? ' (live)' : ' (override)'}
+            </Text>
+            <Slider
+              min={0}
+            max={359}
+            step={1}
+            value={Math.round(activeAngle)}
+            onChange={setDebugAngle}
+            marks={[
+              { value: 0, label: 'New' },
+              { value: 90, label: '1Q' },
+              { value: 180, label: 'Full' },
+              { value: 270, label: '3Q' },
+            ]}
+            styles={{ markLabel: { fontSize: 10 } }}
+          />
+          {debugAngle !== null && (
+            <Text
+              size="xs"
+              c="blue"
+              style={{ cursor: 'pointer', marginTop: 6, display: 'inline-block' }}
+              onClick={() => setDebugAngle(null)}
+            >
+              ↩ reset to live
+            </Text>
+          )}
+        </div>
         )}
       </div>
-      )}
     </div>
   );
 };
