@@ -52,7 +52,7 @@ const RING_SEGS = 64;
 // Preallocate ring buffer: 2 * (RING_SEGS + 1) vertices × 6 floats
 const RING_VERT_COUNT = 2 * (RING_SEGS + 1);
 
-export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebulaDark, nebulaLight }) => {
+export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
   const canvasRef      = useRef<HTMLCanvasElement>(null);
   const overlayRef     = useRef<HTMLCanvasElement>(null);
   const rafRef         = useRef<number>(0);
@@ -61,10 +61,10 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebulaDark, nebulaL
   const colorSchemeRef = useRef(colorScheme);
 
   // Keep nebula bitmaps accessible inside the RAF loop without restarting it
-  const nebulaRef = useRef<NebulaProps>({ nebulaDark, nebulaLight });
+  const nebulaRef = useRef<NebulaProps>({ nebula });
   useEffect(() => {
-    nebulaRef.current = { nebulaDark, nebulaLight };
-  }, [nebulaDark, nebulaLight]);
+    nebulaRef.current = { nebula };
+  }, [nebula]);
 
   // Swap palette immediately without restarting the animation loop
   useEffect(() => {
@@ -121,10 +121,9 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebulaDark, nebulaL
     // Nebula program locations cached once (looked up every frame otherwise)
     const nLoc = nebulaProg ? {
       pos:     gl.getAttribLocation(nebulaProg,  'a_pos'),
-      nebula0: gl.getUniformLocation(nebulaProg, 'u_nebula0')!,
-      nebula1: gl.getUniformLocation(nebulaProg, 'u_nebula1')!,
-      nebula2: gl.getUniformLocation(nebulaProg, 'u_nebula2')!,
+      nebula:  gl.getUniformLocation(nebulaProg, 'u_nebula')!,
       opacity: gl.getUniformLocation(nebulaProg, 'u_opacity')!,
+      light:   gl.getUniformLocation(nebulaProg, 'u_light')!,
       w0:      gl.getUniformLocation(nebulaProg, 'u_w0')!,
       w1:      gl.getUniformLocation(nebulaProg, 'u_w1')!,
       w2:      gl.getUniformLocation(nebulaProg, 'u_w2')!,
@@ -146,8 +145,8 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebulaDark, nebulaL
     gl.bindBuffer(gl.ARRAY_BUFFER, nebulaQuadBuf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1,  1, -1,  -1, 1,  1, 1]), gl.STATIC_DRAW);
 
-    // Nebula textures: one slot per layer (null until first bitmap arrives; re-uploaded on theme switch)
-    const nebulaTex: (WebGLTexture | null)[] = [null, null, null];
+    // Single packed texture (null until bitmap arrives; re-uploaded on theme switch)
+    let nebulaTex: WebGLTexture | null = null;
     let nebulaKind: 'dark' | 'light' | null = null;
 
     // Guard: check max texture size so we don't exceed GPU limits
@@ -251,34 +250,32 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebulaDark, nebulaL
 
       // ── Nebula ─────────────────────────────────────────────────────────────
       if (NEBULA_ENABLED && nebulaProg && nLoc) {
-        const bitmaps = isDark ? nebulaRef.current.nebulaDark : nebulaRef.current.nebulaLight;
+        const bitmap = nebulaRef.current.nebula;
 
-        if (bitmaps && scheme !== nebulaKind) {
-          // Lazy-upload: create / re-upload each layer texture on first use or theme switch
-          for (let i = 0; i < bitmaps.length; i++) {
-            const bmp = bitmaps[i];
-            if (bmp.width <= maxTexSize && bmp.height <= maxTexSize) {
-              if (!nebulaTex[i]) nebulaTex[i] = gl.createTexture();
-              gl.bindTexture(gl.TEXTURE_2D, nebulaTex[i]);
-              gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, bmp);
-              gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-              gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-              gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-              gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-              gl.bindTexture(gl.TEXTURE_2D, null);
-            }
+        if (bitmap && scheme !== nebulaKind) {
+          // Lazy-upload: create / re-upload the packed texture on first use
+          if (bitmap.width <= maxTexSize && bitmap.height <= maxTexSize) {
+            if (!nebulaTex) nebulaTex = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, nebulaTex);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, bitmap);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.bindTexture(gl.TEXTURE_2D, null);
           }
           nebulaKind = scheme;
         }
 
-        if (nebulaTex.some(t => t !== null)) {
+        if (nebulaTex) {
           gl.useProgram(nebulaProg);
 
-          // Bind each layer to its own texture unit and sampler uniform
-          gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, nebulaTex[0]); gl.uniform1i(nLoc.nebula0, 0);
-          gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, nebulaTex[1]); gl.uniform1i(nLoc.nebula1, 1);
-          gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, nebulaTex[2]); gl.uniform1i(nLoc.nebula2, 2);
+          // Bind packed texture to TEXTURE0
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, nebulaTex);
+          gl.uniform1i(nLoc.nebula, 0);
           gl.uniform1f(nLoc.opacity, isDark ? NEBULA_OPACITY : NEBULA_OPACITY_LIGHT);
+          gl.uniform1f(nLoc.light,   isDark ? 0.0 : 1.0);
           gl.uniform1f(nLoc.w0, nebulaW0);
           gl.uniform1f(nLoc.w1, nebulaW1);
           gl.uniform1f(nLoc.w2, nebulaW2);
@@ -289,10 +286,7 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebulaDark, nebulaL
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
           gl.disableVertexAttribArray(nLoc.pos);
 
-          // Unbind all 3 texture units
-          gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, null);
-          gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, null);
-          gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, null);
+          gl.bindTexture(gl.TEXTURE_2D, null);
         }
       }
 
@@ -493,7 +487,7 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebulaDark, nebulaL
       gl.deleteBuffer(ptBuf);
       gl.deleteBuffer(geomBuf);
       gl.deleteBuffer(nebulaQuadBuf);
-      for (const t of nebulaTex) if (t) gl.deleteTexture(t);
+      if (nebulaTex) gl.deleteTexture(nebulaTex);
       gl.deleteProgram(pointProg);
       gl.deleteProgram(geomProg);
       if (nebulaProg) gl.deleteProgram(nebulaProg);

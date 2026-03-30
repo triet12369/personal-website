@@ -37,15 +37,14 @@ export const StarBackground: React.FC<{ nebulaDisabled?: boolean }> = ({ nebulaD
     setWebgl(supported);
   }, []);
 
-  // Load nebula textures for both renderers (always, so they are preloaded
+  // Load nebula texture for both renderers (always, so it is preloaded
   // even on pages where nebula is disabled). Mask the output when disabled so
   // the renderer receives null and skips drawing.
-  const { dark: nebulaDarkRaw, light: nebulaLightRaw } = useNebulaTexture(webgl !== null);
-  const nebulaDark  = nebulaDisabled ? null : nebulaDarkRaw;
-  const nebulaLight = nebulaDisabled ? null : nebulaLightRaw;
+  const { nebula: nebulaRaw } = useNebulaTexture(webgl !== null);
+  const nebula = nebulaDisabled ? null : nebulaRaw;
 
   if (webgl === null) return null;
   return webgl
-    ? <StarBackgroundWebGL nebulaDark={nebulaDark} nebulaLight={nebulaLight} />
-    : <StarBackgroundCanvas nebulaDark={nebulaDark} nebulaLight={nebulaLight} />;
+    ? <StarBackgroundWebGL nebula={nebula} />
+    : <StarBackgroundCanvas nebula={nebula} />;
 };

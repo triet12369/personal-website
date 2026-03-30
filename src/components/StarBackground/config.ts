@@ -60,7 +60,7 @@ export const EXPLOSION_PARTICLE_GRAVITY = 0.03;
 export const NEBULA_ENABLED     = true;
 
 /** Overall nebula layer opacity for dark mode (0–1). */
-export const NEBULA_OPACITY       = 0.95;
+export const NEBULA_OPACITY       = 1;
 
 /** Overall nebula layer opacity for light mode (0–1). */
 export const NEBULA_OPACITY_LIGHT = 0.45;
@@ -83,9 +83,3 @@ export const NEBULA_WEIGHT_SO_LO    = 0.65;  // the other one
  * A random one is chosen on every page load.
  */
 export const NEBULA_BAKED_COUNT = 6;
-
-/**
- * Number of independently-colored noise layers composited per nebula.
- * Must stay in sync with scripts/generate-nebula.mjs → NEBULA_LAYER_COUNT.
- */
-export const NEBULA_LAYER_COUNT = 3;

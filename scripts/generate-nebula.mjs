@@ -22,73 +22,23 @@ import { fileURLToPath }           from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// ─── Config (sync with config.ts) ─────────────────────────────────────────────
+// ─── Config ───────────────────────────────────────────────────────────────────
 
 const NEBULA_BAKED_COUNT  = 6;    // number of variants to bake
-const NEBULA_LAYER_COUNT  = 3;    // independent noise layers per variant
+const NEBULA_LAYER_COUNT  = 3;    // independent noise layers packed into R/G/B channels
 const NEBULA_BAKED_WIDTH  = 1920; // bake resolution (stretched to fit screen at runtime)
 const NEBULA_BAKED_HEIGHT = 1080;
 
-const NEBULA_OCTAVES      = 6;
-const NEBULA_SCALE        = 1;
-const NEBULA_PERSISTENCE  = 0.5;
-const NEBULA_LACUNARITY   = 2.0;
-const NEBULA_SEED         = 42;    // base seed; variant offsets by index, layer offsets by prime
-const NEBULA_BLUR_PASSES  = 2;
-const NEBULA_THRESHOLD    = 0.1;
+const NEBULA_OCTAVES      = 6;    // number of fBm noise layers — more = finer cloud detail, slower generation
+const NEBULA_SCALE        = 1;    // base noise frequency — lower = larger cloud formations, higher = tighter wisps
+const NEBULA_PERSISTENCE  = 0.4;  // amplitude falloff per octave (0–1) — lower = smoother/softer clouds
+const NEBULA_LACUNARITY   = 2.0;  // frequency multiplier per octave — 2.0 doubles detail each layer
+const NEBULA_SEED         = 42;   // base RNG seed; each variant offsets by index × 31337, each layer by prime × 7919
+const NEBULA_BLUR_PASSES  = 2;    // box-blur passes after noise sampling — softens hard edges, 2–3 is usually enough
 
-// Hubble SHO palette — each sub-array is one layer's gradient stops
-const NEBULA_DARK_LAYERS = [
-  // ── S II — sulfur (red / gold channel) ──────────────────────────────────
-  [
-    [0.38, [50,   5,   0]],
-    [0.52, [130,  30,   5]],
-    [0.65, [210,  80,  10]],
-    [0.80, [240, 145,  40]],
-    [1.00, [255, 200,  90]],
-  ],
-  // ── H-α — hydrogen (green channel) ─────────────────────────────────────
-  [
-    [0.38, [  0,  35,  10]],
-    [0.52, [ 10,  90,  30]],
-    [0.65, [ 25, 150,  55]],
-    [0.80, [ 70, 200,  90]],
-    [1.00, [140, 230, 140]],
-  ],
-  // ── O III — oxygen (blue / teal channel) ────────────────────────────────
-  [
-    [0.38, [  0,  15,  55]],
-    [0.52, [ 10,  55, 130]],
-    [0.65, [ 20, 115, 200]],
-    [0.80, [ 40, 170, 230]],
-    [1.00, [100, 215, 255]],
-  ],
-];
-
-// Pantone scale — mirrors the pantone Mantine theme (steps 0–9 light→dark)
-// [246,244,243]  [227,223,219]  [209,202,195]  [190,181,171]
-// [172,160,147]  [154,139,123]  [132,118,101]  [108, 96, 83]
-// [ 84, 75, 64]  [ 60, 54, 46]
-const NEBULA_LIGHT_LAYERS = [
-  // ── warm neutral (steps 2–4, mid-light band) ─────────────────────────────
-  [
-    [0.38, [172, 160, 147]],   // step 4
-    [0.65, [209, 202, 195]],   // step 2
-    [1.00, [246, 244, 243]],   // step 0
-  ],
-  // ── deep warm (steps 5–7, darker mid-tone) ───────────────────────────────
-  [
-    [0.38, [108,  96,  83]],   // step 7
-    [0.65, [154, 139, 123]],   // step 5
-    [1.00, [227, 223, 219]],   // step 1
-  ],
-  // ── mid warm (steps 3–5, slightly richer) ────────────────────────────────
-  [
-    [0.38, [154, 139, 123]],   // step 5
-    [0.65, [190, 181, 171]],   // step 3
-    [1.00, [227, 223, 219]],   // step 1
-  ],
-];
+// ⚠ NEBULA_THRESHOLD is intentionally NOT applied here — raw fBm values [0,1]
+// are stored directly in R/G/B channels so the shader can apply threshold and
+// colour gradients in full precision without double-quantisation.
 
 // ─── Perlin fBm noise ─────────────────────────────────────────────────────────
 
@@ -148,24 +98,9 @@ function fbm(perm, x, y) {
   return (value / maxVal) * 0.5 + 0.5;
 }
 
-// ─── Color interpolation ──────────────────────────────────────────────────────
+// ─── Color interpolation (kept for reference / future use) ──────────────────
 
-function sampleStops(stops, t) {
-  if (t <= stops[0][0]) return stops[0][1];
-  for (let i = 1; i < stops.length; i++) {
-    const [t0, c0] = stops[i - 1];
-    const [t1, c1] = stops[i];
-    if (t <= t1) {
-      const f = (t - t0) / (t1 - t0);
-      return [
-        Math.round(c0[0] + f * (c1[0] - c0[0])),
-        Math.round(c0[1] + f * (c1[1] - c0[1])),
-        Math.round(c0[2] + f * (c1[2] - c0[2])),
-      ];
-    }
-  }
-  return stops[stops.length - 1][1];
-}
+// (Colour gradient logic has moved to runtime shaders / canvas decompose step)
 
 // ─── Box blur ─────────────────────────────────────────────────────────────────
 
@@ -193,23 +128,34 @@ function boxBlur(src, w, h) {
 
 // ─── Texture generation ───────────────────────────────────────────────────────
 
-function generateTexture(seed, stops, width, height) {
-  const perm   = buildPerm(seed);
-  let   pixels = new Uint8Array(width * height * 4);
+/**
+ * Generates one packed RGBA texture for a single variant.
+ * R = layer 0 (S II / warm)  — raw fBm value × 255
+ * G = layer 1 (H-α / deep)  — raw fBm value × 255
+ * B = layer 2 (O III / mid) — raw fBm value × 255
+ * A = 255 (fully opaque — threshold & colour are applied by the shader at runtime)
+ *
+ * The same packed texture is used for both dark (SHO) and light (pantone) themes;
+ * the shader selects the colour palette via u_light uniform.
+ */
+function generatePackedTexture(seedBase, width, height) {
+  // Each layer uses a distinct seed offset so the noise fields are independent
+  const perms = [
+    buildPerm(seedBase),
+    buildPerm(seedBase + 7919),
+    buildPerm(seedBase + 15838),
+  ];
+  let pixels = new Uint8Array(width * height * 4);
 
   for (let y = 0; y < height; y++) {
     const ny = y / height;
     for (let x = 0; x < width; x++) {
-      const nx  = x / width;
-      const val = fbm(perm, nx, ny);
-      const i   = (y * width + x) * 4;
-      if (val < NEBULA_THRESHOLD) continue; // alpha stays 0
-      const alpha = ((val - NEBULA_THRESHOLD) / (1 - NEBULA_THRESHOLD)) * 255;
-      const [r, g, b] = sampleStops(stops, val);
-      pixels[i]     = r;
-      pixels[i + 1] = g;
-      pixels[i + 2] = b;
-      pixels[i + 3] = Math.round(alpha);
+      const nx = x / width;
+      const i  = (y * width + x) * 4;
+      pixels[i]     = Math.round(fbm(perms[0], nx, ny) * 255);  // R = S II / layer 0
+      pixels[i + 1] = Math.round(fbm(perms[1], nx, ny) * 255);  // G = H-α / layer 1
+      pixels[i + 2] = Math.round(fbm(perms[2], nx, ny) * 255);  // B = O III / layer 2
+      pixels[i + 3] = 255;                                        // A = fully opaque
     }
   }
 
@@ -283,32 +229,23 @@ for (const f of readdirSync(outDir)) {
   if (f.endsWith('.png')) rmSync(join(outDir, f));
 }
 
-const themes = [
-  { name: 'dark',  layers: NEBULA_DARK_LAYERS },
-  { name: 'light', layers: NEBULA_LIGHT_LAYERS },
-];
-
-const total = NEBULA_BAKED_COUNT * themes.length * NEBULA_LAYER_COUNT;
+// One packed texture per variant (shared by dark + light; shader selects palette).
+// File naming: {variant}.png  e.g. 0.png, 1.png … 5.png
+const total = NEBULA_BAKED_COUNT;
 let   done  = 0;
 
 for (let v = 0; v < NEBULA_BAKED_COUNT; v++) {
-  // Each variant has a unique base seed; each layer within the variant uses a
-  // distinct prime offset so the noise fields are visually independent.
   const variantSeed = NEBULA_SEED + v * 31337;
+  const filename    = `${v}.png`;
 
-  for (const { name, layers } of themes) {
-    for (let l = 0; l < NEBULA_LAYER_COUNT; l++) {
-      const layerSeed = variantSeed + l * 7919;
-      const filename  = `${name}-${v}-${l}.png`;
-
-      process.stdout.write(`[${++done}/${total}] ${filename} ... `);
-      const t0     = Date.now();
-      const pixels = generateTexture(layerSeed, layers[l], NEBULA_BAKED_WIDTH, NEBULA_BAKED_HEIGHT);
-      const png    = encodePNG(pixels, NEBULA_BAKED_WIDTH, NEBULA_BAKED_HEIGHT);
-      writeFileSync(join(outDir, filename), png);
-      console.log(`done (${Date.now() - t0}ms, ${(png.length / 1024).toFixed(0)} KB)`);
-    }
-  }
+  process.stdout.write(`[${++done}/${total}] ${filename} ... `);
+  const t0     = Date.now();
+  const pixels = generatePackedTexture(variantSeed, NEBULA_BAKED_WIDTH, NEBULA_BAKED_HEIGHT);
+  const png    = encodePNG(pixels, NEBULA_BAKED_WIDTH, NEBULA_BAKED_HEIGHT);
+  writeFileSync(join(outDir, filename), png);
+  console.log(`done (${Date.now() - t0}ms, ${(png.length / 1024).toFixed(0)} KB)`);
 }
 
-console.log(`\nWrote ${total} nebula layer textures to public/nebula/`);
+console.log(`\nWrote ${total} packed nebula textures to public/nebula/`);
+console.log(`Each file encodes ${NEBULA_LAYER_COUNT} independent noise layers in R/G/B channels.`);
+console.log(`Colour palettes (SHO dark + pantone light) are applied at runtime by the shader.`);

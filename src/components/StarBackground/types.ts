@@ -52,11 +52,11 @@ export interface Palette {
 
 /**
  * Nebula bitmap layers passed from the hook to the WebGL renderer.
- * Each array holds NEBULA_LAYER_COUNT bitmaps (one per noise layer).
+ * Single packed bitmap: R = S II / layer-0, G = H-α / layer-1, B = O III / layer-2.
+ * Both dark (SHO) and light (pantone) palettes are applied by the shader at runtime.
  */
 export interface NebulaProps {
-  nebulaDark:  ImageBitmap[] | null;
-  nebulaLight: ImageBitmap[] | null;
+  nebula: ImageBitmap | null;
 }
 
 /** WebGL palette — colors as normalized [0-1] RGB tuples. */
