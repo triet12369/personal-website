@@ -3,7 +3,7 @@ import React, { useEffect, useRef } from 'react';
 
 import styles from './StarBackground.module.scss';
 import {
-  STAR_COUNT, STAR_TWINKLE_AMPLITUDE,
+  STAR_DENSITY, STAR_COUNT_MAX, STAR_TWINKLE_AMPLITUDE, STAR_TWINKLE_CHANCE, STAR_TWINKLE_BURST_CYCLES,
   SHOOT_MAX_COUNT, SHOOT_SPAWN_INTERVAL, SHOOT_SPAWN_CHANCE,
   SHOOT_FADE_IN, SHOOT_FADE_OUT, SHOOT_GLOW_RADIUS, SHOOT_LINE_WIDTH,
   EXPLOSION_PARTICLE_COUNT,
@@ -160,7 +160,7 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
     // Points: [x, y, r, g, b, a, size] × N
     // Worst-case size is max(stars, particles-per-frame). Particles can stack across
     // multiple simultaneous explosions (one per shooting star), so we size for that.
-    const PT_MAX  = Math.max(STAR_COUNT, SHOOT_MAX_COUNT * EXPLOSION_PARTICLE_COUNT);
+    const PT_MAX  = Math.max(STAR_COUNT_MAX, SHOOT_MAX_COUNT * EXPLOSION_PARTICLE_COUNT);
     const ptData    = new Float32Array(PT_MAX * 7);
     // Trails: 6 verts × 6 floats per shooting star
     const trailData = new Float32Array(SHOOT_MAX_COUNT * 6 * 6);
@@ -181,7 +181,8 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
       el.height = h;
       gl.viewport(0, 0, w, h);
       if (overlayRef.current) { overlayRef.current.width = w; overlayRef.current.height = h; }
-      stars = makeStars(STAR_COUNT, w, h, paletteRef.current.maxStarAlpha);
+      const starCount = Math.min(STAR_COUNT_MAX, Math.round(STAR_DENSITY * w * h / 1_000_000));
+      stars = makeStars(starCount, w, h, paletteRef.current.maxStarAlpha);
     }
 
     let resizeTimer: ReturnType<typeof setTimeout>;
@@ -290,17 +291,27 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
         }
       }
 
-      // ── Stars ──────────────────────────────────────────────────────────────
+      // ── Stars ────────────────────────────────────────────────────────────
+      const dt = Math.min(wallDelta, 100) / 1000;
       let sn = 0;
       for (const s of stars) {
-        s.alpha += s.twinkleSpeed * s.twinkleDir;
-        if (
-          s.alpha >= s.baseAlpha + STAR_TWINKLE_AMPLITUDE ||
-          s.alpha <= s.baseAlpha - STAR_TWINKLE_AMPLITUDE
-        ) {
-          s.twinkleDir = (s.twinkleDir * -1) as 1 | -1;
+        if (s.twinkleActive) {
+          s.twinklePhase += s.twinkleSpeed * dt;
+          if (s.twinklePhase >= STAR_TWINKLE_BURST_CYCLES * Math.PI * 2) {
+            s.twinklePhase  = 0;
+            s.twinkleActive = false;
+            s.alpha         = s.baseAlpha;
+          } else {
+            s.alpha = Math.max(0, Math.min(palette.maxStarAlpha,
+              s.baseAlpha + STAR_TWINKLE_AMPLITUDE * Math.sin(s.twinklePhase)));
+          }
+        } else {
+          s.alpha = s.baseAlpha;
+          if (Math.random() < STAR_TWINKLE_CHANCE * dt) {
+            s.twinkleActive = true;
+            s.twinklePhase  = 0;
+          }
         }
-        s.alpha = Math.max(0, Math.min(palette.maxStarAlpha, s.alpha));
 
         // In dark mode use each star's individual spectral colour;
         // in light mode use the unified warm palette colour.

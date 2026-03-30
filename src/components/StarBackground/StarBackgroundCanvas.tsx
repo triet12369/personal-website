@@ -3,7 +3,7 @@ import React, { useEffect, useRef } from 'react';
 
 import styles from './StarBackground.module.scss';
 import {
-  STAR_COUNT, STAR_TWINKLE_AMPLITUDE,
+  STAR_DENSITY, STAR_COUNT_MAX, STAR_TWINKLE_AMPLITUDE, STAR_TWINKLE_CHANCE, STAR_TWINKLE_BURST_CYCLES,
   SHOOT_MAX_COUNT, SHOOT_SPAWN_INTERVAL, SHOOT_SPAWN_CHANCE,
   SHOOT_FADE_IN, SHOOT_FADE_OUT, SHOOT_GLOW_RADIUS, SHOOT_LINE_WIDTH,
   EXPLOSION_RING_EXPAND, EXPLOSION_RING_FADE,
@@ -62,7 +62,8 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
       h = el.offsetHeight;
       el.width  = w;
       el.height = h;
-      stars = makeStars(STAR_COUNT, w, h, paletteRef.current.maxStarAlpha);
+      const starCount = Math.min(STAR_COUNT_MAX, Math.round(STAR_DENSITY * w * h / 1_000_000));
+      stars = makeStars(starCount, w, h, paletteRef.current.maxStarAlpha);
     }
 
     let resizeTimer: ReturnType<typeof setTimeout>;
@@ -210,16 +211,26 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
         }
       }
 
-      // ── Static stars (twinkle) ─────────────────────────────────────────────
+      // ── Static stars (twinkle bursts) ─────────────────────────────────────
+      const dt = Math.min(wallDelta, 100) / 1000;
       for (const s of stars) {
-        s.alpha += s.twinkleSpeed * s.twinkleDir;
-        if (
-          s.alpha >= s.baseAlpha + STAR_TWINKLE_AMPLITUDE ||
-          s.alpha <= s.baseAlpha - STAR_TWINKLE_AMPLITUDE
-        ) {
-          s.twinkleDir = (s.twinkleDir * -1) as 1 | -1;
+        if (s.twinkleActive) {
+          s.twinklePhase += s.twinkleSpeed * dt;
+          if (s.twinklePhase >= STAR_TWINKLE_BURST_CYCLES * Math.PI * 2) {
+            s.twinklePhase  = 0;
+            s.twinkleActive = false;
+            s.alpha         = s.baseAlpha;
+          } else {
+            s.alpha = Math.max(0, Math.min(palette.maxStarAlpha,
+              s.baseAlpha + STAR_TWINKLE_AMPLITUDE * Math.sin(s.twinklePhase)));
+          }
+        } else {
+          s.alpha = s.baseAlpha;
+          if (Math.random() < STAR_TWINKLE_CHANCE * dt) {
+            s.twinkleActive = true;
+            s.twinklePhase  = 0;
+          }
         }
-        s.alpha = Math.max(0, Math.min(palette.maxStarAlpha, s.alpha));
 
         c.beginPath();
         c.arc(s.x, s.y, s.r, 0, Math.PI * 2);

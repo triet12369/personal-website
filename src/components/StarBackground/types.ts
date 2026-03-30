@@ -5,7 +5,8 @@ export interface Star {
   baseAlpha: number;
   alpha: number;
   twinkleSpeed: number;
-  twinkleDir: 1 | -1;
+  twinklePhase: number;   // current phase in radians (0 when idle)
+  twinkleActive: boolean; // whether a burst is in progress
   color: [number, number, number]; // RGB 0-255
 }
 

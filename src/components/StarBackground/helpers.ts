@@ -60,9 +60,10 @@ export function makeStars(count: number, w: number, h: number, maxAlpha: number)
       r:            rand(STAR_RADIUS_MIN, STAR_RADIUS_MAX),
       baseAlpha,
       alpha:        baseAlpha,
-      twinkleSpeed: rand(STAR_TWINKLE_SPEED_MIN, STAR_TWINKLE_SPEED_MAX),
-      twinkleDir:   Math.random() > 0.5 ? 1 : -1,
-      color:        pickStarColor(),
+      twinkleSpeed:  rand(STAR_TWINKLE_SPEED_MIN, STAR_TWINKLE_SPEED_MAX),
+      twinklePhase:  0,
+      twinkleActive: false,
+      color:         pickStarColor(),
     };
   });
 }

@@ -12,12 +12,21 @@ export const RENDERER: 'auto' | 'webgl' | 'canvas' = 'auto';
 
 // ─── Stars ────────────────────────────────────────────────────────────────────
 
-export const STAR_COUNT             = 360;
-export const STAR_RADIUS_MIN        = 0.3;
-export const STAR_RADIUS_MAX        = 2.0;
-export const STAR_TWINKLE_SPEED_MIN = 0.003;
-export const STAR_TWINKLE_SPEED_MAX = 0.011;
-export const STAR_TWINKLE_AMPLITUDE = 0.2;
+/** Stars per megapixel of canvas area. */
+export const STAR_DENSITY           = 350;
+/** Hard cap — prevents excessive star counts on very large/HiDPI screens. */
+export const STAR_COUNT_MAX         = 1800;
+export const STAR_RADIUS_MIN        = 0.5;
+export const STAR_RADIUS_MAX        = 2.5;
+/** Phase advance per second (radians). Controls how fast a burst oscillates. */
+export const STAR_TWINKLE_SPEED_MIN = 12;
+export const STAR_TWINKLE_SPEED_MAX = 24;
+/** ±alpha swing during a burst. */
+export const STAR_TWINKLE_AMPLITUDE = 0.3;
+/** Per-second probability that a resting star starts a twinkle burst. */
+export const STAR_TWINKLE_CHANCE    = 0.1;
+/** Number of full sine cycles per burst before the star goes back to rest. */
+export const STAR_TWINKLE_BURST_CYCLES = 2;
 
 // ─── Shooting stars ───────────────────────────────────────────────────────────
 
