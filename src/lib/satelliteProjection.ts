@@ -284,3 +284,58 @@ export function geoToHimawariTile(
 
   return { col, row, localPx, localPy };
 }
+
+// ---------------------------------------------------------------------------
+// NASA GIBS Blue Marble tile projection (fallback for uncovered regions)
+// ---------------------------------------------------------------------------
+
+/**
+ * Maps a geographic coordinate to a NASA GIBS WMTS tile at a chosen zoom level
+ * using the EPSG:4326 (geographic) CRS.
+ *
+ * GIBS EPSG:4326 tile grid:
+ *   - Zoom 0: 2 tiles wide × 1 tile tall  (360° × 180°)
+ *   - Zoom z: 2^(z+1) × 2^z tiles
+ *   - Each tile is 256×256 px
+ *   - Tile origin: top-left = (-180°, +90°)
+ *
+ * Tile URL:
+ *   https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/BlueMarble_NextGeneration/default/2004-08/500m/{z}/{row}/{col}.jpg
+ *
+ * @returns `{ z, col, row, localPx, localPy }` where localPx/localPy are
+ *          normalised [0,1] positions within the tile. Never returns null —
+ *          Blue Marble covers the entire globe.
+ */
+/**
+ * Actual GIBS EPSG:4326 "500m" TileMatrixSet dimensions (from GetCapabilities).
+ * These are NOT powers of 2 — they reflect the real 500m scale.
+ *
+ * z=0:  2×1   (180°/tile)
+ * z=1:  3×2   (120°×90°/tile)
+ * z=2:  5×3   ( 72°×60°/tile)
+ * z=3: 10×5   ( 36°×36°/tile)
+ * z=4: 20×10  ( 18°×18°/tile)
+ * z=5: 40×20  (  9°×9°/tile)
+ * z=6: 80×40  (4.5°×4.5°/tile)
+ */
+const GIBS_500M_TILES_X = [2, 3, 5, 10, 20, 40, 80];
+const GIBS_500M_TILES_Y = [1, 2, 3,  5, 10, 20, 40];
+
+export function geoToGibsTile(
+  lat: number,
+  lon: number,
+  z: number = 5,
+): { z: number; col: number; row: number; localPx: number; localPy: number } {
+  const tilesX = GIBS_500M_TILES_X[z];
+  const tilesY = GIBS_500M_TILES_Y[z];
+
+  const fracX = (lon + 180) / 360 * tilesX;
+  const fracY = (90 - lat) / 180 * tilesY;
+
+  const col = Math.max(0, Math.min(tilesX - 1, Math.floor(fracX)));
+  const row = Math.max(0, Math.min(tilesY - 1, Math.floor(fracY)));
+  const localPx = fracX - col;
+  const localPy = fracY - row;
+
+  return { z, col, row, localPx, localPy };
+}

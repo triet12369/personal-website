@@ -8,7 +8,13 @@ import {
   Tooltip,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
+import dynamic from 'next/dynamic';
 import React, { FC, useEffect, useRef, useState } from 'react';
+
+const BlueMarbleWebGL = dynamic(
+  () => import('./BlueMarbleWebGL').then((m) => m.BlueMarbleWebGL),
+  { ssr: false, loading: () => <Skeleton height="100%" radius="sm" /> },
+);
 
 import {
   getConusImageUrl,
@@ -19,12 +25,14 @@ import {
   SatKey,
 } from '../../lib/satelliteEarth';
 import {
+  geoToGibsTile,
   geoToHimawariTile,
   geoToImageFraction,
   geoToImageFractionCONUS,
 } from '../../lib/satelliteProjection';
 import { useT } from '../../hooks/useT';
 import { useTranslation } from 'react-i18next';
+import { sunSubSolarPoint } from '../../lib/astronomy/sun';
 import type { Location } from './LocationSelector';
 import styles from './Observatory.module.scss';
 
@@ -232,9 +240,16 @@ function ZoomedEarthView({
     );
   }
 
-  // ── Fallback: CSS-zoom full-disk ────────────────────────────────────────────
-  const fullDiskPos = geoToImageFraction(lat, lon, data.satellite);
-  const { px: fdPx, py: fdPy } = fullDiskPos ?? { px: 0.5, py: 0.5 };
+  // ── Fallback: NASA GIBS Blue Marble static tile ─────────────────────────────
+  const GIBS_ZOOM = 4;
+  const {
+    z,
+    col: gibsCol,
+    row: gibsRow,
+    localPx: gibsLx,
+    localPy: gibsLy,
+  } = geoToGibsTile(lat, lon, GIBS_ZOOM);
+  const gibsUrl = `https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/BlueMarble_NextGeneration/default/500m/${z}/${gibsRow}/${gibsCol}.jpeg`;
   return (
     <div
       style={{
@@ -247,19 +262,69 @@ function ZoomedEarthView({
       }}
     >
       <img
-        src={data.imageUrl}
-        alt="Zoomed satellite image"
+        src={gibsUrl}
+        alt="Blue Marble zoomed view"
         style={{
           width: `${ZOOM * 100}%`,
           aspectRatio: '1 / 1',
-          objectFit: 'cover',
           position: 'absolute',
-          left: `${-(fdPx * ZOOM - 0.5) * 100}%`,
-          top: `${-(fdPy * ZOOM - 0.5) * 100}%`,
+          left: `${(0.5 - ZOOM * gibsLx) * 100}%`,
+          top: `${(0.5 - ZOOM * gibsLy) * 100}%`,
           imageRendering: 'auto',
         }}
       />
+      {/* Non-live badge */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 8,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(0,0,0,0.55)',
+          color: 'rgba(255,255,255,0.7)',
+          fontSize: '0.7rem',
+          padding: '2px 8px',
+          borderRadius: 4,
+          pointerEvents: 'none',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {t('observatory.earthNonLive')}
+      </div>
       <ZoomedCentreMarker lat={lat} lon={lon} />
+    </div>
+  );
+}
+
+/**
+ * Shown in the full-disk slot when the location is on the far side of the
+ * planet (not visible from the assigned satellite). Renders a WebGL globe
+ * textured with NASA GIBS Blue Marble, rotated so the location faces the
+ * camera.
+ */
+function StaticLocationView({ lat, lon, sunLat, sunLon }: { lat: number; lon: number; sunLat: number; sunLon: number }) {
+  const t = useT();
+  return (
+    <div style={{ position: 'relative' }}>
+      <BlueMarbleWebGL lat={lat} lon={lon} sunLat={sunLat} sunLon={sunLon} />
+      {/* Non-live badge */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 8,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(0,0,0,0.55)',
+          color: 'rgba(255,255,255,0.7)',
+          fontSize: '0.7rem',
+          padding: '2px 8px',
+          borderRadius: 4,
+          pointerEvents: 'none',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {t('observatory.earthNonLive')}
+      </div>
     </div>
   );
 }
@@ -445,7 +510,7 @@ function LocationMarker({
   );
 }
 
-export const EarthCard: FC<Props> = ({ location }) => {
+export const EarthCard: FC<Props> = ({ location, date }) => {
   const t = useT();
   const { t: tStr } = useTranslation();
   const ALL_SATS = ALL_SATS_KEYS.map(({ key, labelKey }) => ({
@@ -457,6 +522,7 @@ export const EarthCard: FC<Props> = ({ location }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [zoomed, setZoomed] = useState(false);
+  const subSolar = sunSubSolarPoint(date);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = async (lat: number, lon: number) => {
@@ -616,6 +682,14 @@ export const EarthCard: FC<Props> = ({ location }) => {
               )}
               {zoomed ? (
                 <ZoomedEarthView lat={location.lat} lon={location.lon} data={data} />
+              ) : geoToImageFraction(location.lat, location.lon, data.satellite) ===
+                null ? (
+                <StaticLocationView
+                  lat={location.lat}
+                  lon={location.lon}
+                  sunLat={subSolar.lat}
+                  sunLon={subSolar.lon}
+                />
               ) : (
                 <>
                   <img
@@ -653,9 +727,13 @@ export const EarthCard: FC<Props> = ({ location }) => {
               }}
             >
               <Text size="xs" c="dimmed">
-                {t('observatory.earthSatellite')}: <strong>{data.satellite}</strong>
+                {geoToImageFraction(location.lat, location.lon, data.satellite) === null ? (
+                  t('observatory.earthSimulated')
+                ) : (
+                  <>{t('observatory.earthSatellite')}: <strong>{data.satellite}</strong></>
+                )}
               </Text>
-              {formattedTime && (
+              {formattedTime && geoToImageFraction(location.lat, location.lon, data.satellite) !== null && (
                 <Text size="xs" c="dimmed">
                   {formattedTime}
                 </Text>

@@ -8,18 +8,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 import type { GroundTrackPoint, ISSPosition } from '../../lib/iss';
-
-const DEG = Math.PI / 180;
-
-function latLonToVec3(lat: number, lon: number, r: number): THREE.Vector3 {
-  const phi = (90 - lat) * DEG;
-  const theta = (lon + 180) * DEG;
-  return new THREE.Vector3(
-    -r * Math.sin(phi) * Math.cos(theta),
-    r * Math.cos(phi),
-    r * Math.sin(phi) * Math.sin(theta),
-  );
-}
+import { latLonToVec3, createEarthMesh, createAtmosphereMesh } from './earthGlobe';
 
 type Props = {
   position: ISSPosition;
@@ -72,74 +61,12 @@ export const ISSGroundTrackWebGL: FC<Props> = ({ position, track, now, sunLat = 
     camera.position.copy(issDir.multiplyScalar(3));
     camera.lookAt(0, 0, 0);
 
-    // Earth sphere with custom day/night shader
-    const geo = new THREE.SphereGeometry(1, 64, 32);
-    const loader = new THREE.TextureLoader();
-    const dayTex = loader.load('/textures/earth.jpg');
+    const earthMeshObj = createEarthMesh(new THREE.Vector3(1, 0, 0));
+    const earthMat = earthMeshObj.material;
+    scene.add(earthMeshObj.mesh);
 
-    const earthMat = new THREE.ShaderMaterial({
-      uniforms: {
-        dayTexture:   { value: dayTex },
-        nightTexture: { value: new THREE.Texture() },
-        sunDir:       { value: new THREE.Vector3(1, 0, 0) },
-      },
-      vertexShader: /* glsl */`
-        varying vec2 vUv;
-        varying vec3 vWorldNormal;
-        void main() {
-          vUv = uv;
-          vWorldNormal = normalize(mat3(modelMatrix) * normal);
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: /* glsl */`
-        uniform sampler2D dayTexture;
-        uniform sampler2D nightTexture;
-        uniform vec3 sunDir;
-        varying vec2 vUv;
-        varying vec3 vWorldNormal;
-        void main() {
-          vec3 N = normalize(vWorldNormal);
-          float NdotL = dot(N, sunDir);
-          // Soft terminator blend over ~25 degrees
-          float dayBlend = smoothstep(-0.1, 0.15, NdotL);
-          vec4 daySample   = texture2D(dayTexture,   vUv);
-          vec4 nightSample = texture2D(nightTexture, vUv);
-          // Day side: ambient base + diffuse
-          vec3 dayLit   = daySample.rgb   * (0.1 + 0.9 * max(NdotL, 0.0));
-          // Night side: downsampled city-lights dimmed
-          vec3 nightLit = nightSample.rgb * 0.7;
-          gl_FragColor = vec4(mix(nightLit, dayLit, dayBlend), 1.0);
-        }
-      `,
-    });
-
-    // Load + downsample night texture to 50 % via canvas
-    loader.load('/textures/earth_night.jpg', (tex) => {
-      const img = tex.image as HTMLImageElement;
-      const canvas = document.createElement('canvas');
-      canvas.width  = Math.max(1, Math.floor(img.width  * 0.5));
-      canvas.height = Math.max(1, Math.floor(img.height * 0.5));
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        earthMat.uniforms.nightTexture.value = new THREE.CanvasTexture(canvas);
-        tex.dispose();
-      }
-    });
-
-    const earth = new THREE.Mesh(geo, earthMat);
-    scene.add(earth);
-
-    // Atmosphere glow (MeshBasicMaterial — unlit, always visible)
-    const atmGeo = new THREE.SphereGeometry(1.015, 64, 32);
-    const atmMat = new THREE.MeshBasicMaterial({
-      color: 0x3399ff,
-      transparent: true,
-      opacity: 0.06,
-      side: THREE.FrontSide,
-    });
-    scene.add(new THREE.Mesh(atmGeo, atmMat));
+    const atmObj = createAtmosphereMesh();
+    scene.add(atmObj.mesh);
 
     // ISS marker — sprite using the ClearOutside ISS icon
     const issTexture = new THREE.TextureLoader().load('/images/iss_icon.png');
@@ -202,6 +129,8 @@ export const ISSGroundTrackWebGL: FC<Props> = ({ position, track, now, sunLat = 
       cancelAnimationFrame(frameId);
       controls.dispose();
       renderer.dispose();
+      earthMeshObj.dispose();
+      atmObj.dispose();
       window.removeEventListener('resize', handleResize);
       if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
     };
