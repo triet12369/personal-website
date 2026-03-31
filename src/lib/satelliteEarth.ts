@@ -1,6 +1,56 @@
 import type { SatelliteImageResponse } from '../pages/api/satellite-image';
+import { isInConusSector } from './satelliteProjection';
 
 export type SatelliteEarthData = SatelliteImageResponse & { fetchedAt: number };
+
+// ---------------------------------------------------------------------------
+// CONUS / PACUS zoomed image helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Derives the CONUS (or PACUS for GOES-18) 2500×1500 GeoColor image URL from
+ * an existing full-disk image URL by replacing the path segment and resolution.
+ *
+ * Full-disk URL example:
+ *   https://cdn.star.nesdis.noaa.gov/GOES19/ABI/FD/GEOCOLOR/{ts}_GOES19-ABI-FD-GEOCOLOR-678x678.jpg
+ * CONUS URL example:
+ *   https://cdn.star.nesdis.noaa.gov/GOES19/ABI/CONUS/GEOCOLOR/{ts}_GOES19-ABI-CONUS-GEOCOLOR-2500x1500.jpg
+ *
+ * Returns `null` for Himawari-9 (uses tile API instead).
+ */
+export function getConusImageUrl(imageUrl: string): string | null {
+  // Match GOES19 or GOES18, ABI, FD path
+  const m = imageUrl.match(
+    /^(https:\/\/cdn\.star\.nesdis\.noaa\.gov\/(GOES19|GOES18)\/ABI\/)FD\/GEOCOLOR\/(\d+)_(GOES1[89]-ABI-FD-GEOCOLOR)-678x678\.jpg$/,
+  );
+  if (!m) return null;
+
+  const [, base, , timestamp, labelBase] = m;
+  // CONUS images publish ~1 minute after the full-disk boundary (e.g. FD at :10 → CONUS at :11).
+  // Increment HH:MM by 1 to get the matching CONUS timestamp.
+  const tYear = timestamp.slice(0, 4);
+  const tDoy  = timestamp.slice(4, 7);
+  const tHh   = parseInt(timestamp.slice(7, 9), 10);
+  const tMm   = parseInt(timestamp.slice(9, 11), 10);
+  const totalMins = tHh * 60 + tMm + 1;
+  const newHh = String(Math.floor(totalMins / 60) % 24).padStart(2, '0');
+  const newMm = String(totalMins % 60).padStart(2, '0');
+  const conusTs = `${tYear}${tDoy}${newHh}${newMm}`;
+  const conusLabel = labelBase.replace('-FD-', '-CONUS-');
+  return `${base}CONUS/GEOCOLOR/${conusTs}_${conusLabel}-2500x1500.jpg`;
+}
+
+/**
+ * Returns whether a location falls within the CONUS/PACUS sector of the given
+ * satellite, meaning a higher-resolution CONUS image is available.
+ */
+export function locationHasConusImage(
+  lat: number,
+  lon: number,
+  satellite: string,
+): boolean {
+  return isInConusSector(lat, lon, satellite);
+}
 
 export type SatKey = 'GOES19' | 'GOES18' | 'Himawari9';
 

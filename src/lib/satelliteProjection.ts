@@ -140,3 +140,147 @@ export function geoToImageFraction(
 
   return { px, py };
 }
+
+// ---------------------------------------------------------------------------
+// GOES CONUS / PACUS sector projection
+// ---------------------------------------------------------------------------
+
+/**
+ * CONUS (Continental U.S.) scan coverage in ABI Fixed Grid scan angles (rad).
+ *
+ * Derived from NOAA GOES-R PUG L1b §4.2 and confirmed against the 2500×1500
+ * CONUS product: the sector covers 3000 × 5000 2-km pixels at 56 μrad/px,
+ * centered at the values below.
+ *
+ * PACUS (GOES-18 equivalent of CONUS) uses identical angular extents but is
+ * centred on a different nadir longitude.
+ */
+interface ConusDescriptor {
+  /** Left edge scan angle (rad, EW axis, negative = West) */
+  xMin: number;
+  /** Right edge scan angle (rad, EW axis) */
+  xMax: number;
+  /** Bottom edge scan angle (rad, NS axis, negative = South) */
+  yMin: number;
+  /** Top edge scan angle (rad, NS axis) */
+  yMax: number;
+}
+
+// GOES-19 CONUS extent (EW: ~−0.101441 to +0.038749 rad; NS: ~+0.128226 to +0.044444 rad)
+// Derived from NOAA ABI CONUS product documentation (5424×3264 native → 2500×1500 thumbnail)
+const CONUS_GOES19: ConusDescriptor = {
+  xMin: -0.101441,
+  xMax:  0.038749,
+  yMin:  0.044444,
+  yMax:  0.128226,
+};
+
+// GOES-18 PACUS extent.
+// Width = 2500 px × 56 μrad/px = 0.140000 rad, symmetric about nadir → xMax = -xMin = 0.070000.
+const CONUS_GOES18: ConusDescriptor = {
+  xMin: -0.070000,
+  xMax:  0.070000,
+  yMin:  0.044444,
+  yMax:  0.128226,
+};
+
+const CONUS_SECTORS: Record<string, ConusDescriptor> = {
+  'GOES-19 (East)': CONUS_GOES19,
+  'GOES-18 (West)': CONUS_GOES18,
+};
+
+/**
+ * Project a geographic coordinate to normalised [0,1] position within the
+ * GOES CONUS / PACUS 2500×1500 sector image.
+ *
+ * Returns `null` if the point is outside the sector or not visible.
+ */
+export function geoToImageFractionCONUS(
+  lat: number,
+  lon: number,
+  satelliteName: string,
+): { px: number; py: number } | null {
+  const sat = SATELLITES[satelliteName];
+  const sector = CONUS_SECTORS[satelliteName];
+  if (!sat || !sector) return null;
+
+  const { nadirLon } = sat;
+
+  // Degrees → radians
+  const phi = (lat * Math.PI) / 180;
+  const lam = (lon * Math.PI) / 180;
+  const lam0 = (nadirLon * Math.PI) / 180;
+
+  // Geocentric latitude & radius
+  const phi_c = Math.atan((R_POL ** 2 / R_EQ ** 2) * Math.tan(phi));
+  const r_c = R_POL / Math.sqrt(1 - E2 * Math.cos(phi_c) ** 2);
+
+  const s_x = H_SAT - r_c * Math.cos(phi_c) * Math.cos(lam - lam0);
+  const s_y = -r_c * Math.cos(phi_c) * Math.sin(lam - lam0);
+  const s_z = r_c * Math.sin(phi_c);
+
+  if (s_x <= 0) return null;
+
+  const visible =
+    H_SAT * Math.cos(phi_c) * Math.cos(lam - lam0) -
+    r_c * (Math.cos(phi_c) ** 2 + (R_EQ / R_POL) ** 2 * Math.sin(phi_c) ** 2) >= 0;
+  if (!visible) return null;
+
+  const x = Math.atan(-s_y / s_x);
+  const s_norm = Math.sqrt(s_x ** 2 + s_y ** 2 + s_z ** 2);
+  const y = Math.atan(s_z / s_norm);
+
+  const { xMin, xMax, yMin, yMax } = sector;
+
+  // Check point is within the CONUS sector
+  if (x < xMin || x > xMax || y < yMin || y > yMax) return null;
+
+  const px = (x - xMin) / (xMax - xMin);
+  // Image rows run top-to-bottom; y angle is larger at the top (North)
+  const py = (yMax - y) / (yMax - yMin);
+
+  if (px < 0 || px > 1 || py < 0 || py > 1) return null;
+
+  return { px, py };
+}
+
+/**
+ * Returns true if a geographic coordinate falls within the CONUS/PACUS sector
+ * of the given satellite.
+ */
+export function isInConusSector(lat: number, lon: number, satelliteName: string): boolean {
+  return geoToImageFractionCONUS(lat, lon, satelliteName) !== null;
+}
+
+// ---------------------------------------------------------------------------
+// Himawari tile projection
+// ---------------------------------------------------------------------------
+
+/**
+ * Maps a geographic coordinate to a Himawari-9 tile in the `4d` (4×4) grid.
+ *
+ * The NICT API serves tiles as:
+ *   https://himawari8.nict.go.jp/img/D531106/4d/550/{YYYY}/{MM}/{DD}/{HHMMSS}_{col}_{row}.png
+ *
+ * Each tile is 550×550 px and covers 1/4 of the full-disk in each dimension.
+ *
+ * @returns `{ col, row, localPx, localPy }` where col/row are 0-indexed tile
+ *          indices and localPx/localPy are normalised [0,1] positions within
+ *          that tile. Returns `null` if the point is not visible.
+ */
+export function geoToHimawariTile(
+  lat: number,
+  lon: number,
+): { col: number; row: number; localPx: number; localPy: number } | null {
+  const GRID = 4;
+  const pos = geoToImageFraction(lat, lon, 'Himawari-9');
+  if (!pos) return null;
+
+  const { px, py } = pos;
+  const col = Math.min(Math.floor(px * GRID), GRID - 1);
+  const row = Math.min(Math.floor(py * GRID), GRID - 1);
+  const localPx = px * GRID - col;
+  const localPy = py * GRID - row;
+
+  return { col, row, localPx, localPy };
+}
