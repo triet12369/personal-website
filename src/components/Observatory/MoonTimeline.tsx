@@ -57,13 +57,15 @@ function fmtDate(d: Date): string {
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
-function fmtCountdown(diffMs: number): string {
+function fmtCountdown(diffMs: number, tStr: (key: string) => string): string {
   const totalMinutes = Math.round(diffMs / 60000);
   if (totalMinutes <= 0) return '';
   const days = Math.floor(totalMinutes / (60 * 24));
   const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
-  if (days > 0) return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
-  return `${hours}h`;
+  const d = tStr('observatory.durationDay');
+  const h = tStr('observatory.durationHour');
+  if (days > 0) return hours > 0 ? `${days}${d} ${hours}${h}` : `${days}${d}`;
+  return `${hours}${h}`;
 }
 
 export const MoonTimeline: FC<Props> = ({ next, now, overrideDate, onDateChange, onReturnToNow }) => {
@@ -193,8 +195,10 @@ export const MoonTimeline: FC<Props> = ({ next, now, overrideDate, onDateChange,
             <g key={ph.key}>
               {/* Tick */}
               <line
-                x1={x} y1={TICK_TOP}
-                x2={x} y2={TICK_BOTTOM}
+                x1={x}
+                y1={TICK_TOP}
+                x2={x}
+                y2={TICK_BOTTOM}
                 stroke={color}
                 strokeWidth={ph.key === 'full' ? 2 : 1.5}
               />
@@ -231,7 +235,9 @@ export const MoonTimeline: FC<Props> = ({ next, now, overrideDate, onDateChange,
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
           onPointerEnter={() => setIsHovered(true)}
-          onPointerLeave={() => { if (!isDragging) setIsHovered(false); }}
+          onPointerLeave={() => {
+            if (!isDragging) setIsHovered(false);
+          }}
           style={{ cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none' }}
         >
           {/* Wide invisible hit area */}
@@ -243,8 +249,10 @@ export const MoonTimeline: FC<Props> = ({ next, now, overrideDate, onDateChange,
             fill="transparent"
           />
           <line
-            x1={cursorX} y1={TRACK_Y - 14}
-            x2={cursorX} y2={TRACK_Y + TRACK_HEIGHT + 14}
+            x1={cursorX}
+            y1={TRACK_Y - 14}
+            x2={cursorX}
+            y2={TRACK_Y + TRACK_HEIGHT + 14}
             stroke={isDragging ? '#f59e0b' : isOverride ? '#60a5fa' : '#ffffff'}
             strokeWidth={isDragging ? 3 : isOverride ? 2.5 : 2}
             strokeLinecap="round"
@@ -308,9 +316,10 @@ export const MoonTimeline: FC<Props> = ({ next, now, overrideDate, onDateChange,
           <span className={styles.sunNextLabel}>{tStr('observatory.next')}</span>
           <span className={styles.sunNextName}>{nextPhase.label}</span>
           <span className={styles.sunNextTime}>{fmtDate(nextPhase.date)}</span>
-          {fmtCountdown(nextPhase.date.getTime() - now.getTime()) && (
+          {fmtCountdown(nextPhase.date.getTime() - now.getTime(), tStr) && (
             <span className={styles.sunNextCountdown}>
-              {tStr('observatory.in')} {fmtCountdown(nextPhase.date.getTime() - now.getTime())}
+              {tStr('observatory.in')}{' '}
+              {fmtCountdown(nextPhase.date.getTime() - now.getTime(), tStr)}
             </span>
           )}
         </div>

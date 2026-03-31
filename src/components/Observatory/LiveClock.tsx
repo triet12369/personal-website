@@ -6,6 +6,7 @@
 
 import { Stack, Text } from '@mantine/core';
 import React, { FC, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import styles from './Observatory.module.scss';
 
@@ -13,12 +14,22 @@ type Props = {
   onMinuteTick?: (date: Date) => void;
 };
 
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+function formatTime(date: Date, locale: string): string {
+  return date.toLocaleTimeString(locale, {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
 }
 
-function formatDate(date: Date): string {
-  return date.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+function formatDate(date: Date, locale: string): string {
+  return date.toLocaleDateString(locale, {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
 }
 
 function formatTZ(): string {
@@ -30,6 +41,8 @@ function formatTZ(): string {
 }
 
 export const LiveClock: FC<Props> = ({ onMinuteTick }) => {
+  const { i18n } = useTranslation();
+  const locale = i18n.language;
   const [now, setNow] = useState<Date | null>(null);
   const lastMinuteRef = useRef<number>(-1);
 
@@ -51,9 +64,12 @@ export const LiveClock: FC<Props> = ({ onMinuteTick }) => {
 
   return (
     <Stack gap={2}>
-      <div className={styles.clockDisplay}>{formatTime(now)}</div>
-      <Text className={styles.dateDisplay}>{formatDate(now)}</Text>
-      <Text size="xs" c="dimmed">{formatTZ()} · UTC{now.getTimezoneOffset() <= 0 ? '+' : ''}{-now.getTimezoneOffset() / 60}</Text>
+      <div className={styles.clockDisplay}>{formatTime(now, locale)}</div>
+      <Text className={styles.dateDisplay}>{formatDate(now, locale)}</Text>
+      <Text size="xs" c="dimmed">
+        {formatTZ()} · UTC{now.getTimezoneOffset() <= 0 ? '+' : ''}
+        {-now.getTimezoneOffset() / 60}
+      </Text>
     </Stack>
   );
 };

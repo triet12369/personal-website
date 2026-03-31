@@ -13,6 +13,7 @@
     "dev": "next dev --webpack",
     "build": "next build --webpack",
     "build:demos": "npm run build --workspaces --if-present && node scripts/copy-demos.js",
+    "test": "vitest run",
     "start": "next start",
     "generate:nebula": "node scripts/generate-nebula.mjs",
     "lint": "eslint --fix 'src/**/*.{ts,tsx}'"
@@ -65,6 +66,7 @@
     "postcss-simple-vars": "^7.0.1",
     "prettier": "^3.0.0",
     "sass": "^1.69.5",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.2"
   }
 }

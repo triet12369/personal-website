@@ -30,10 +30,10 @@ function fmt(d: Date): string {
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 }
 
-function fmtDuration(seconds: number): string {
+function fmtDuration(seconds: number, tStr: (key: string) => string): string {
   const m = Math.floor(seconds / 60);
   const s = Math.round(seconds % 60);
-  return `${m}m ${s}s`;
+  return `${m}${tStr('observatory.durationMin')} ${s}${tStr('observatory.durationSec')}`;
 }
 
 export const ISSCard: FC<Props> = ({ location, date }) => {
@@ -108,14 +108,29 @@ export const ISSCard: FC<Props> = ({ location, date }) => {
   return (
     <div className={styles.card}>
       <div className={styles.cardTitle}>
-        <img src="/images/iss_icon.png" alt="ISS" style={{ width: 16, height: 16, verticalAlign: 'middle', marginRight: 6 }} />
+        <img
+          src="/images/iss_icon.png"
+          alt="ISS"
+          style={{ width: 16, height: 16, verticalAlign: 'middle', marginRight: 6 }}
+        />
         {t('observatory.issTitle')}
       </div>
-      <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: '1.25rem',
+          alignItems: 'flex-start',
+          flexWrap: 'wrap',
+        }}
+      >
         {/* Future passes */}
         <Stack gap="md" style={{ flex: '1 1 200px', minWidth: 0 }}>
           {loading && <Skeleton height={100} radius="md" />}
-          {error && <Text size="sm" c="red">{error}</Text>}
+          {error && (
+            <Text size="sm" c="red">
+              {error}
+            </Text>
+          )}
 
           {position && !loading && (
             <span className={styles.issPosition}>
@@ -127,7 +142,14 @@ export const ISSCard: FC<Props> = ({ location, date }) => {
 
           {passes.length > 0 && (
             <div>
-              <Text size="xs" c="dimmed" tt="uppercase" fw={600} style={{ letterSpacing: '0.1em' }} mb={6}>
+              <Text
+                size="xs"
+                c="dimmed"
+                tt="uppercase"
+                fw={600}
+                style={{ letterSpacing: '0.1em' }}
+                mb={6}
+              >
                 {t('observatory.nextPasses')}
               </Text>
               {passes.slice(0, 3).map((p, i) => (
@@ -136,7 +158,11 @@ export const ISSCard: FC<Props> = ({ location, date }) => {
                     <div>
                       <div className={styles.passTime}>{fmt(p.start)}</div>
                       <Text size="xs" c="dimmed">
-                        {p.start.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
+                        {p.start.toLocaleDateString([], {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
                       </Text>
                     </div>
                     <Badge color="cyan" variant="light">
@@ -144,12 +170,15 @@ export const ISSCard: FC<Props> = ({ location, date }) => {
                     </Badge>
                   </Group>
                   <Text size="xs" c="dimmed" mt={4}>
-                    {fmtDuration(p.duration)} · {azimuthToDirection(p.startAzimuth)} → {azimuthToDirection(p.endAzimuth)}
+                    {fmtDuration(p.duration, tStr)} · {azimuthToDirection(p.startAzimuth)}{' '}
+                    → {azimuthToDirection(p.endAzimuth)}
                   </Text>
                 </div>
               ))}
               {passes.length === 0 && (
-                <Text size="sm" c="dimmed">{t('observatory.noPassesSoon')}</Text>
+                <Text size="sm" c="dimmed">
+                  {t('observatory.noPassesSoon')}
+                </Text>
               )}
             </div>
           )}
