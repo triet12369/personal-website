@@ -12,7 +12,7 @@ import * as satellite from 'satellite.js';
 // CelesTrak enforces when browsers call celestrak.org directly.
 const TLE_URL = '/api/tle';
 const LS_KEY = 'obs_iss_tle';
-const CACHE_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours — matches server cache TTL
+const CACHE_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours — matches server cache TTL
 
 type TLECache = {
   line1: string;

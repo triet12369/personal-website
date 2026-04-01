@@ -291,7 +291,7 @@ async function handleComments(
 
 const CELESTRAK_TLE_URL =
   'https://celestrak.org/NORAD/elements/gp.php?CATNR=25544&FORMAT=TLE';
-const TLE_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours — CelesTrak's minimum poll interval
+const TLE_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours
 
 async function handleTle(
   request: Request,
