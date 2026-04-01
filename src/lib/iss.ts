@@ -20,8 +20,14 @@ type TLECache = {
   fetchedAt: number;
 };
 
+// Module-level satrec cache — parsed once per TLE fetch, reused for fast synchronous propagation
+let _satrecCache: ReturnType<typeof satellite.twoline2satrec> | null = null;
+
+// In-flight dedup: concurrent callers share a single fetch promise instead of each firing their own.
+let _fetchInFlight: Promise<{ line1: string; line2: string }> | null = null;
+
 async function fetchTLE(): Promise<{ line1: string; line2: string }> {
-  // Try cache first
+  // Try localStorage cache first — avoids any network call on repeat visits.
   if (typeof window !== 'undefined') {
     try {
       const raw = localStorage.getItem(LS_KEY);
@@ -36,21 +42,33 @@ async function fetchTLE(): Promise<{ line1: string; line2: string }> {
     }
   }
 
-  const res = await fetch(TLE_URL);
-  if (!res.ok) throw new Error(`TLE proxy fetch failed: ${res.status}`);
-  const json = await res.json() as { line1: string; line2: string };
-  const { line1, line2 } = json;
+  // Deduplicate concurrent callers — e.g. getISSPasses + getISSGroundTrack + getSatrec
+  // all fire at the same time on first load; only one fetch should go out.
+  if (_fetchInFlight) return _fetchInFlight;
 
-  if (typeof window !== 'undefined') {
+  _fetchInFlight = (async () => {
     try {
-      const cache: TLECache = { line1, line2, fetchedAt: Date.now() };
-      localStorage.setItem(LS_KEY, JSON.stringify(cache));
-    } catch {
-      // ignore storage errors
-    }
-  }
+      const res = await fetch(TLE_URL);
+      if (!res.ok) throw new Error(`TLE proxy fetch failed: ${res.status}`);
+      const json = await res.json() as { line1: string; line2: string };
+      const { line1, line2 } = json;
 
-  return { line1, line2 };
+      if (typeof window !== 'undefined') {
+        try {
+          const cache: TLECache = { line1, line2, fetchedAt: Date.now() };
+          localStorage.setItem(LS_KEY, JSON.stringify(cache));
+        } catch {
+          // ignore storage errors
+        }
+      }
+
+      return { line1, line2 };
+    } finally {
+      _fetchInFlight = null;
+    }
+  })();
+
+  return _fetchInFlight;
 }
 
 export type ISSPosition = {
@@ -59,13 +77,6 @@ export type ISSPosition = {
   alt: number; // km
 };
 
-// Module-level satrec cache — parsed once per TLE fetch, reused for fast synchronous propagation
-let _satrecCache: ReturnType<typeof satellite.twoline2satrec> | null = null;
-
-/**
- * Fetch TLE (cached 6h) and return a parsed satrec ready for propagation.
- * Subsequent calls within the cache window are essentially instant.
- */
 export async function getSatrec(): Promise<ReturnType<typeof satellite.twoline2satrec>> {
   const { line1, line2 } = await fetchTLE();
   if (!_satrecCache) {
