@@ -7,9 +7,12 @@
 
 import * as satellite from 'satellite.js';
 
-const TLE_URL = 'https://celestrak.org/NORAD/elements/gp.php?CATNR=25544&FORMAT=TLE';
+// TLE is fetched via our own API route, which proxies CelesTrak with a
+// server-side 2-hour cache. This prevents the per-IP rate limit that
+// CelesTrak enforces when browsers call celestrak.org directly.
+const TLE_URL = '/api/tle';
 const LS_KEY = 'obs_iss_tle';
-const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+const CACHE_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours — matches server cache TTL
 
 type TLECache = {
   line1: string;
@@ -34,13 +37,9 @@ async function fetchTLE(): Promise<{ line1: string; line2: string }> {
   }
 
   const res = await fetch(TLE_URL);
-  if (!res.ok) throw new Error(`CelesTrak fetch failed: ${res.status}`);
-  const text = await res.text();
-  const lines = text.trim().split('\n').map((l) => l.trim());
-  // Format: NAME\nLINE1\nLINE2
-  if (lines.length < 3) throw new Error('Unexpected TLE format');
-  const line1 = lines[1];
-  const line2 = lines[2];
+  if (!res.ok) throw new Error(`TLE proxy fetch failed: ${res.status}`);
+  const json = await res.json() as { line1: string; line2: string };
+  const { line1, line2 } = json;
 
   if (typeof window !== 'undefined') {
     try {

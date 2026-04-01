@@ -286,6 +286,68 @@ async function handleComments(
 }
 
 // ---------------------------------------------------------------------------
+// TLE cache handler
+// ---------------------------------------------------------------------------
+
+const CELESTRAK_TLE_URL =
+  'https://celestrak.org/NORAD/elements/gp.php?CATNR=25544&FORMAT=TLE';
+const TLE_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours — CelesTrak's minimum poll interval
+
+async function handleTle(
+  request: Request,
+  env: Env,
+  catnr: string,
+): Promise<Response> {
+  if (request.method !== 'GET') return json({ error: 'Method Not Allowed' }, 405);
+  if (catnr !== 'iss') return json({ error: 'Not Found' }, 404);
+
+  // Return D1-cached TLE if still fresh.
+  const cached = await env.DB.prepare(
+    'SELECT line1, line2, fetched_at FROM tle_cache WHERE id = ?',
+  )
+    .bind('ISS')
+    .first<{ line1: string; line2: string; fetched_at: string }>();
+
+  if (cached) {
+    const age = Date.now() - new Date(cached.fetched_at).getTime();
+    if (age < TLE_TTL_MS) {
+      return json({ line1: cached.line1, line2: cached.line2 });
+    }
+  }
+
+  // Fetch fresh TLE from CelesTrak.
+  let line1: string, line2: string;
+  try {
+    const upstream = await fetch(CELESTRAK_TLE_URL);
+    if (!upstream.ok) {
+      if (cached) return json({ line1: cached.line1, line2: cached.line2 });
+      return json({ error: `CelesTrak returned ${upstream.status}` }, 502);
+    }
+    const text = await upstream.text();
+    const lines = text.trim().split('\n').map((l) => l.trim());
+    if (lines.length < 3) {
+      if (cached) return json({ line1: cached.line1, line2: cached.line2 });
+      return json({ error: 'Unexpected TLE format' }, 502);
+    }
+    line1 = lines[1];
+    line2 = lines[2];
+  } catch {
+    if (cached) return json({ line1: cached.line1, line2: cached.line2 });
+    return json({ error: 'Failed to fetch TLE data' }, 503);
+  }
+
+  // Persist to D1.
+  await env.DB.prepare(
+    `INSERT INTO tle_cache (id, line1, line2, fetched_at) VALUES (?, ?, ?, ?)
+     ON CONFLICT (id) DO UPDATE SET line1 = excluded.line1, line2 = excluded.line2, fetched_at = excluded.fetched_at`,
+  )
+    .bind('ISS', line1, line2, new Date().toISOString())
+    .run();
+
+  return json({ line1, line2 });
+}
+
+// ---------------------------------------------------------------------------
 // User profile handler
 // ---------------------------------------------------------------------------
 
@@ -351,6 +413,9 @@ export default {
     const url = new URL(request.url);
     const parts = url.pathname.slice(1).split('/'); // strip leading '/'
     const [resource, id, subresource] = parts;
+
+    // /tle/:catnr is public; no id guard needed.
+    if (resource === 'tle') return handleTle(request, env, id ?? '');
 
     if (!id) return json({ error: 'Not Found' }, 404);
 

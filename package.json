@@ -10,7 +10,7 @@
     "node": ">=24.x"
   },
   "scripts": {
-    "dev": "next dev --webpack",
+    "dev": "concurrently --kill-others --names \"next,worker\" --prefix-colors \"cyan,yellow\" \"next dev --webpack\" \"npm run dev --workspace=personal-site-worker\"",
     "build": "next build --webpack",
     "build:demos": "npm run build --workspaces --if-present && node scripts/copy-demos.js",
     "test": "vitest run",
@@ -48,6 +48,7 @@
     "@types/react-dom": "18.0.6",
     "@typescript-eslint/eslint-plugin": "^8.57.2",
     "@typescript-eslint/parser": "^8.57.2",
+    "concurrently": "^9.2.1",
     "eslint": "^9.0.0",
     "eslint-config-next": "^16.2.1",
     "eslint-config-prettier": "^9.0.0",
