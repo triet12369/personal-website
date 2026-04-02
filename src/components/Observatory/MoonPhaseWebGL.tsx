@@ -219,13 +219,26 @@ export const MoonPhaseWebGL: FC<Props> = ({ phaseAngle, latitude, debug = false 
       controls.maxDistance = 8;
       controlsRef.current = controls;
 
-      // Drive a render loop while controls are active
-      const tick = () => {
-        rafRef.current = requestAnimationFrame(tick);
-        controls.update();
-        renderer.render(scene, camera);
+      // Render on-demand: only when controls fire a change event (user drag or damping).
+      // OrbitControls fires 'change' each frame while damping is still decelerating,
+      // so the loop naturally stops once the camera settles — no wasted frames.
+      const scheduleRender = () => {
+        if (rafRef.current) return;
+        rafRef.current = requestAnimationFrame(() => {
+          rafRef.current = 0;
+          controls.update();
+          renderer.render(scene, camera);
+        });
       };
-      rafRef.current = requestAnimationFrame(tick);
+      controls.addEventListener('change', scheduleRender);
+      controls.addEventListener('start', scheduleRender);
+
+      return () => {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
+        controls.removeEventListener('change', scheduleRender);
+        controls.removeEventListener('start', scheduleRender);
+      };
     } else {
       cancelAnimationFrame(rafRef.current);
       if (controlsRef.current) {
