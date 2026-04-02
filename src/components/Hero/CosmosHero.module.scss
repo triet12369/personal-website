@@ -2,30 +2,24 @@
   position: relative;
   width: 100%;
   height: 100%;
-
-  // ── Tune fade strength: percentage of the canvas edge that fades out ──────
-  --fade-v: 12%; // top & bottom
-  --fade-h: 0%;  // left & right
-
-  // Soft fade on all four edges — dark mode only
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    opacity: 0;
-    background:
-      linear-gradient(to bottom, #1e1b17 0%, transparent var(--fade-v), transparent calc(100% - var(--fade-v)), #1e1b17 100%),
-      linear-gradient(to right,  #1e1b17 0%, transparent var(--fade-h), transparent calc(100% - var(--fade-h)), #1e1b17 100%);
-  }
-
-  :global([data-mantine-color-scheme='dark']) &::after {
-    opacity: 1;
-  }
 }
 
 .canvas {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.credit {
+  position: absolute;
+  bottom: 30px;
+  right: 10px;
+  margin: 0;
+  padding: 0;
+  font:
+    11px/1 system-ui,
+    sans-serif;
+  color: rgba(255, 255, 255, 0.7);
+  pointer-events: none;
+  user-select: none;
 }

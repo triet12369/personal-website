@@ -96,7 +96,12 @@ const RING_SEGS = 64;
 // Preallocate ring buffer: 2 * (RING_SEGS + 1) vertices × 6 floats
 const RING_VERT_COUNT = 2 * (RING_SEGS + 1);
 
-export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula, nebulaPalette }) => {
+export const StarBackgroundWebGL: React.FC<NebulaProps> = ({
+  nebula,
+  nebulaPalette,
+  heroNebula,
+  heroBitmap,
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
@@ -111,6 +116,12 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula, nebulaPalet
     nebulaRef.current = { nebula, nebulaPalette };
     nebulaPaletteRef.current = nebulaPalette;
   }, [nebula, nebulaPalette]);
+
+  // Hero astrophoto ref — accessible inside RAF without restarting the loop
+  const heroRef = useRef({ heroNebula, heroBitmap });
+  useEffect(() => {
+    heroRef.current = { heroNebula, heroBitmap };
+  }, [heroNebula, heroBitmap]);
 
   // Swap palette immediately without restarting the animation loop
   useEffect(() => {
@@ -187,8 +198,25 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula, nebulaPalet
           uvScale: gl.getUniformLocation(nebulaProg, 'u_uv_scale')!,
           starLight: gl.getUniformLocation(nebulaProg, 'u_star_light')!,
           illumBoost: gl.getUniformLocation(nebulaProg, 'u_illum_boost')!,
+          // Hero astrophoto
+          heroTex: gl.getUniformLocation(nebulaProg, 'u_hero_tex')!,
+          heroEnabled: gl.getUniformLocation(nebulaProg, 'u_hero_enabled')!,
+          heroOpacity: gl.getUniformLocation(nebulaProg, 'u_hero_opacity')!,
+          heroProcBlend: gl.getUniformLocation(nebulaProg, 'u_hero_proc_blend')!,
+          heroUvOffset: gl.getUniformLocation(nebulaProg, 'u_hero_uv_offset')!,
+          heroUvScale: gl.getUniformLocation(nebulaProg, 'u_hero_uv_scale')!,
+          heroScreenMin: gl.getUniformLocation(nebulaProg, 'u_hero_screen_min')!,
+          heroScreenMax: gl.getUniformLocation(nebulaProg, 'u_hero_screen_max')!,
         }
       : null;
+
+    // Bind sampler units once after program creation (samplers are program state)
+    if (nebulaProg && nLoc) {
+      gl.useProgram(nebulaProg);
+      gl.uniform1i(nLoc.nebula, 0); // TEXTURE0 = procedural nebula
+      gl.uniform1i(nLoc.starLight, 1); // TEXTURE1 = star illumination FBO
+      gl.uniform1i(nLoc.heroTex, 2); // TEXTURE2 = hero astrophoto
+    }
 
     // SHO weights: H-α always dominant, S II / O III randomly ordered.
     const soFlipped = Math.random() < 0.5;
@@ -225,6 +253,29 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula, nebulaPalet
     // Single packed texture (null until bitmap arrives; re-uploaded on theme switch)
     let nebulaTex: WebGLTexture | null = null;
     let nebulaKind: 'dark' | 'light' | null = null;
+
+    // 1×1 transparent fallback — bound to TEXTURE0 when nebulaTex is not yet ready
+    // so the hero shader draw still works even during the brief proc-nebula load delay.
+    const fallbackTex = gl.createTexture()!;
+    gl.bindTexture(gl.TEXTURE_2D, fallbackTex);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      1,
+      1,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      new Uint8Array([0, 0, 0, 0]),
+    );
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    // Hero astrophoto texture (TEXTURE2) — uploaded once, re-used across frames
+    let heroTex: WebGLTexture | null = null;
+    let heroTexSrc: string | undefined;
 
     // Star-illumination accumulation FBO — wide additive star halos are rendered here
     // each frame, then the result is sampled by the nebula shader to locally boost
@@ -439,12 +490,14 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula, nebulaPalet
           nebulaKind = scheme;
         }
 
-        if (nebulaTex) {
+        if (nebulaTex || heroTex) {
           gl.useProgram(nebulaProg);
 
           // Cover-crop UV: preserve texture aspect ratio, center-crop the overflow.
-          const texW = nebulaRef.current.nebula!.width;
-          const texH = nebulaRef.current.nebula!.height;
+          // Fall back to 1,1 / 0,0 when proc nebula texture isn't ready yet.
+          const procBitmap = nebulaRef.current.nebula;
+          const texW = procBitmap?.width ?? 1;
+          const texH = procBitmap?.height ?? 1;
           const canvasAR = w / h;
           const textureAR = texW / texH;
           let uvScaleX: number, uvScaleY: number, uvOffX: number, uvOffY: number;
@@ -462,9 +515,9 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula, nebulaPalet
             uvOffX = (1.0 - uvScaleX) / 2.0;
           }
 
-          // Bind packed nebula texture to TEXTURE0
+          // Bind packed nebula texture to TEXTURE0 (fallback to 1×1 transparent)
           gl.activeTexture(gl.TEXTURE0);
-          gl.bindTexture(gl.TEXTURE_2D, nebulaTex);
+          gl.bindTexture(gl.TEXTURE_2D, nebulaTex ?? fallbackTex);
           gl.uniform1i(nLoc.nebula, 0);
           // Bind star illumination FBO to TEXTURE1
           gl.activeTexture(gl.TEXTURE1);
@@ -472,6 +525,92 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula, nebulaPalet
           gl.uniform1i(nLoc.starLight, 1);
           gl.uniform1f(nLoc.illumBoost, NEBULA_ILLUM_BOOST);
           gl.activeTexture(gl.TEXTURE0); // leave TEXTURE0 active for subsequent ops
+
+          // ── Hero astrophoto (TEXTURE2) ─────────────────────────────────────
+          {
+            const hero = heroRef.current.heroNebula;
+            const hBmp = heroRef.current.heroBitmap;
+            const heroOn = !!(hero && hBmp);
+
+            if (heroOn && hBmp) {
+              // (Re-)upload if the src changed or texture not yet created
+              if (!heroTex || heroTexSrc !== hero!.src) {
+                if (!heroTex) heroTex = gl.createTexture();
+                // Upload without UNPACK_FLIP_Y — it is unreliable with ImageBitmap
+                // sources across browsers. Y is corrected in the shader instead.
+                gl.bindTexture(gl.TEXTURE_2D, heroTex);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, hBmp);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                gl.bindTexture(gl.TEXTURE_2D, null);
+                heroTexSrc = hero!.src;
+              }
+
+              // Compute UV transform based on the requested fit mode
+              const fit = hero!.fit ?? 'cover';
+              const hImgAR = hBmp.width / hBmp.height;
+              const hCanAR = w / h;
+              let hUvScaleX = 1.0,
+                hUvScaleY = 1.0,
+                hUvOffX = 0.0,
+                hUvOffY = 0.0;
+              let hScrMinX = 0.0,
+                hScrMinY = 0.0,
+                hScrMaxX = 1.0,
+                hScrMaxY = 1.0;
+
+              if (fit === 'cover') {
+                // Scale to fill, crop the overflow (current default behaviour)
+                if (hCanAR >= hImgAR) {
+                  hUvScaleX = 1.0;
+                  hUvScaleY = hImgAR / hCanAR;
+                  hUvOffX = 0.0;
+                  hUvOffY = (1.0 - hUvScaleY) / 2.0;
+                } else {
+                  hUvScaleY = 1.0;
+                  hUvScaleX = hCanAR / hImgAR;
+                  hUvOffY = 0.0;
+                  hUvOffX = (1.0 - hUvScaleX) / 2.0;
+                }
+                // screenMin/Max remain (0,0)-(1,1)
+              } else if (fit === 'contain') {
+                // Scale to fit, letterbox/pillarbox — image UV spans full [0,1]
+                // but only a subrect of the screen shows the image
+                hUvScaleX = 1.0;
+                hUvScaleY = 1.0;
+                hUvOffX = 0.0;
+                hUvOffY = 0.0;
+                if (hCanAR >= hImgAR) {
+                  // canvas wider → pillarbox: image fills height, gaps on sides
+                  const frac = hImgAR / hCanAR; // fraction of canvas width filled
+                  hScrMinX = (1.0 - frac) / 2.0;
+                  hScrMaxX = 1.0 - hScrMinX;
+                  // full height
+                } else {
+                  // canvas taller → letterbox: image fills width, gaps top/bottom
+                  const frac = hCanAR / hImgAR;
+                  hScrMinY = (1.0 - frac) / 2.0;
+                  hScrMaxY = 1.0 - hScrMinY;
+                  // full width
+                }
+              }
+              // fit === 'fill': all defaults (uvScale=1,uvOffset=0,screenRect=full) — stretch
+
+              gl.activeTexture(gl.TEXTURE2);
+              gl.bindTexture(gl.TEXTURE_2D, heroTex);
+              gl.uniform2f(nLoc.heroUvOffset, hUvOffX, hUvOffY);
+              gl.uniform2f(nLoc.heroUvScale, hUvScaleX, hUvScaleY);
+              gl.uniform2f(nLoc.heroScreenMin, hScrMinX, hScrMinY);
+              gl.uniform2f(nLoc.heroScreenMax, hScrMaxX, hScrMaxY);
+              gl.activeTexture(gl.TEXTURE0);
+            }
+
+            gl.uniform1f(nLoc.heroEnabled, heroOn ? 1.0 : 0.0);
+            gl.uniform1f(nLoc.heroOpacity, hero?.photoOpacity ?? 0.75);
+            gl.uniform1f(nLoc.heroProcBlend, hero?.proceduralBlend ?? 0.35);
+          }
           const driftX =
             NEBULA_DRIFT_AMPLITUDE * Math.sin(NEBULA_DRIFT_SPEED * elapsed + driftPhaseX);
           const driftY =
@@ -495,6 +634,8 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula, nebulaPalet
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
           gl.disableVertexAttribArray(nLoc.pos);
 
+          gl.activeTexture(gl.TEXTURE2);
+          gl.bindTexture(gl.TEXTURE_2D, null);
           gl.activeTexture(gl.TEXTURE1);
           gl.bindTexture(gl.TEXTURE_2D, null);
           gl.activeTexture(gl.TEXTURE0);
@@ -769,6 +910,8 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula, nebulaPalet
       gl.deleteBuffer(geomBuf);
       gl.deleteBuffer(nebulaQuadBuf);
       if (nebulaTex) gl.deleteTexture(nebulaTex);
+      if (heroTex) gl.deleteTexture(heroTex);
+      gl.deleteTexture(fallbackTex);
       gl.deleteTexture(illumTex);
       gl.deleteFramebuffer(illumFBO);
       gl.deleteProgram(pointProg);

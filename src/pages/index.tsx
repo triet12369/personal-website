@@ -1,14 +1,14 @@
 import { Container, Title } from '@mantine/core';
-import { GetStaticProps } from 'next';
-import React from 'react';
+import type { GetStaticProps } from 'next';
 import { useTranslation } from 'react-i18next';
 
 import { useT } from '../hooks/useT';
 import { PostTimeline } from '../components/Blog/PostTimeline';
 import { CosmosHero } from '../components/Hero/CosmosHero';
 import { Layout } from '../components/Layout/Layout';
+import { HERO_NEBULA_CONFIG } from '../components/Hero/heroNebulaConfig';
 import { getAllPosts } from '../lib/blog';
-import { BlogPost } from '../types';
+import type { BlogPost } from '../types';
 
 type HomePageProps = {
   recentPosts: BlogPost[];
@@ -19,7 +19,7 @@ export default function IndexPage({ recentPosts }: HomePageProps) {
   const t = useT();
 
   return (
-    <Layout title={tStr('home.pageTitle')} blurBackground disableNebula>
+    <Layout title={tStr('home.pageTitle')} blurBackground heroNebula={HERO_NEBULA_CONFIG}>
       <div style={{ height: '60vh' }}>
         <CosmosHero />
       </div>

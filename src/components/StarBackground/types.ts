@@ -56,6 +56,44 @@ export interface Palette {
 }
 
 /**
+ * Configuration for the real astrophoto that blends with the procedural nebula.
+ * Change `src` to swap the image; tune `proceduralBlend` to dial up/down the
+ * procedural nebula overlay that sits on top of your photo.
+ */
+export interface HeroNebulaConfig {
+  /** Public URL of the astrophoto, e.g. '/hero/ic1805.jpg' */
+  src: string;
+  /** 0 = invisible → 1 = fully opaque. Default 0.75 matches the old BG_IMAGE_OPACITY. */
+  photoOpacity?: number;
+  /** Text shown as HTML credit in the bottom-right of the hero area. */
+  creditText?: string;
+  /**
+   * How strongly the procedural nebula overlays the photo:
+   *   0 = photo only (no procedural overlay)
+   *   1 = full procedural nebula composited on top
+   * Default 0.35
+   */
+  proceduralBlend?: number;
+  /**
+   * Canvas composite operation used to blend the procedural nebula on top of the photo.
+   * 'screen' (default) brightens and looks natural with emission nebulae.
+   * 'normal' paints the procedural nebula at `proceduralBlend` opacity (no lightening).
+   * 'lighter' additive — very glowy.
+   *
+   * Note: in the WebGL renderer only 'screen' blend is implemented in the shader.
+   * 'normal' and 'lighter' are identical to 'screen' in WebGL mode.
+   */
+  proceduralBlendMode?: 'screen' | 'normal' | 'lighter';
+  /**
+   * How the astrophoto is sized relative to the canvas — mirrors CSS object-fit.
+   *   'cover'   (default) — scales to fill, cropping the overflow. No gaps.
+   *   'contain'           — scales to fit entirely within the canvas. Transparent surroundings.
+   *   'fill'              — stretches to exactly fill. Aspect ratio is not preserved.
+   */
+  fit?: 'cover' | 'contain' | 'fill';
+}
+
+/**
  * Nebula bitmap layers passed from the hook to the WebGL renderer.
  * Single packed bitmap: R = S II / layer-0, G = H-α / layer-1, B = O III / layer-2.
  * Both dark (SHO) and light (pantone) palettes are applied by the shader at runtime.
@@ -63,6 +101,8 @@ export interface Palette {
 export interface NebulaProps {
   nebula: ImageBitmap | null;
   nebulaPalette: NebulaPalette;
+  heroNebula?: HeroNebulaConfig;
+  heroBitmap?: ImageBitmap | null;
 }
 
 /** WebGL palette — colors as normalized [0-1] RGB tuples. */

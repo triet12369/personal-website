@@ -19,6 +19,17 @@ uniform float     u_w1;          // H-α / layer-1 prominence weight
 uniform float     u_w2;          // O III / layer-2 prominence weight
 uniform sampler2D u_star_light;  // star-glow accumulation FBO (screen space)
 uniform float     u_illum_boost; // how strongly star clusters brighten the nebula
+// ── Hero astrophoto ──────────────────────────────────────────────────────────
+uniform sampler2D u_hero_tex;        // real astrophoto (TEXTURE2)
+uniform float     u_hero_opacity;    // photo base opacity (photoOpacity)
+uniform float     u_hero_enabled;    // 1.0 when a hero image is active
+uniform float     u_hero_proc_blend; // 0=photo only → 1=full proc nebula on top
+uniform vec2      u_hero_uv_offset;  // image UV offset  (cover: center crop; contain/fill: 0,0)
+uniform vec2      u_hero_uv_scale;   // image UV scale   (cover: crop rect;   contain/fill: 1,1)
+// Screen-space rect (0-1, Y-up) inside which the hero image is drawn.
+// 'cover'/'fill' → (0,0)–(1,1).  'contain' → the letterbox subrect.
+uniform vec2      u_hero_screen_min; // bottom-left of the image rect in screen UV space
+uniform vec2      u_hero_screen_max; // top-right  of the image rect in screen UV space
 varying vec2      v_uv;
 varying vec2      v_screen_uv;
 
@@ -186,6 +197,42 @@ void main() {
   float a    = litA * u_opacity;
 
   // Premultiplied output
+  // ── Hero astrophoto blend ────────────────────────────────────────────────
+  // When a real nebula photo is provided, use it as the base layer and
+  // screen-blend the procedural nebula on top at u_hero_proc_blend strength.
+  if (u_hero_enabled > 0.5) {
+    // v_screen_uv is (0,0)=bottom-left in GL, but the ImageBitmap was uploaded
+    // without UNPACK_FLIP_Y so its origin is at the top. Flip Y to match.
+    vec2 screenUV = vec2(v_screen_uv.x, 1.0 - v_screen_uv.y);
+
+    // For 'contain' fit the image only occupies a subrect of the canvas.
+    // Pixels outside that rect don't get the hero layer.
+    if (screenUV.x < u_hero_screen_min.x || screenUV.x > u_hero_screen_max.x ||
+        screenUV.y < u_hero_screen_min.y || screenUV.y > u_hero_screen_max.y) {
+      gl_FragColor = vec4(rgb * a, a);
+      return;
+    }
+
+    // Remap the screen-space position inside the hero rect to image UV [0,1].
+    // For cover/fill: screen rect = (0,0)-(1,1) so t == screenUV.
+    // For contain:    t remaps the subrect to [0,1] image space.
+    vec2 t = (screenUV - u_hero_screen_min) / (u_hero_screen_max - u_hero_screen_min);
+    vec2 heroUV   = u_hero_uv_offset + t * u_hero_uv_scale;
+    vec4  heroSmp  = texture2D(u_hero_tex, heroUV);
+    vec3  heroBase = heroSmp.rgb * u_hero_opacity;
+
+    // Scale the procedural contribution down by the blend amount, then
+    // screen-blend it over the photo (1 − (1−A)(1−B) brightens both layers).
+    vec3  procScaled = rgb * u_hero_proc_blend;
+    vec3  finalRGB   = 1.0 - (1.0 - heroBase) * (1.0 - procScaled);
+
+    // Quad is always at least photoOpacity opaque so the photo is never hidden.
+    float finalA = max(u_hero_opacity, a * u_hero_proc_blend);
+
+    gl_FragColor = vec4(finalRGB * finalA, finalA);
+    return;
+  }
+
   gl_FragColor = vec4(rgb * a, a);
 }
 `;

@@ -5,6 +5,8 @@ import { StarBackgroundCanvas } from './StarBackgroundCanvas';
 import { StarBackgroundWebGL } from './StarBackgroundWebGL';
 import { RENDERER } from './config';
 import { useNebulaTexture } from './useNebulaTexture';
+import { useHeroNebulaBitmap } from './useHeroNebulaBitmap';
+import type { HeroNebulaConfig } from './types';
 
 // ─── WebGL detection (client-side only) ───────────────────────────────────────
 
@@ -22,9 +24,10 @@ function detectWebGL(): boolean {
 
 // ─── Entry point ──────────────────────────────────────────────────────────────
 
-export const StarBackground: React.FC<{ nebulaDisabled?: boolean }> = ({
-  nebulaDisabled,
-}) => {
+export const StarBackground: React.FC<{
+  nebulaDisabled?: boolean;
+  heroNebula?: HeroNebulaConfig;
+}> = ({ nebulaDisabled, heroNebula }) => {
   // null = not yet determined (SSR / pre-mount)
   const [webgl, setWebgl] = useState<boolean | null>(null);
 
@@ -48,10 +51,23 @@ export const StarBackground: React.FC<{ nebulaDisabled?: boolean }> = ({
   const { nebula: nebulaRaw, palette } = useNebulaTexture(webgl !== null);
   const nebula = nebulaDisabled ? null : nebulaRaw;
 
+  // Load the hero astrophoto (if provided). Cached on window across navigations.
+  const heroBitmap = useHeroNebulaBitmap(heroNebula?.src);
+
   if (webgl === null) return null;
   return webgl ? (
-    <StarBackgroundWebGL nebula={nebula} nebulaPalette={palette} />
+    <StarBackgroundWebGL
+      nebula={nebula}
+      nebulaPalette={palette}
+      heroNebula={heroNebula}
+      heroBitmap={heroBitmap}
+    />
   ) : (
-    <StarBackgroundCanvas nebula={nebula} nebulaPalette={palette} />
+    <StarBackgroundCanvas
+      nebula={nebula}
+      nebulaPalette={palette}
+      heroNebula={heroNebula}
+      heroBitmap={heroBitmap}
+    />
   );
 };

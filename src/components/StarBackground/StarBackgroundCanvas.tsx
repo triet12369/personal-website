@@ -48,6 +48,8 @@ import type { NebulaProps, Palette, Star, ShootingStar, Explosion } from './type
 export const StarBackgroundCanvas: React.FC<NebulaProps> = ({
   nebula,
   nebulaPalette,
+  heroNebula,
+  heroBitmap,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
@@ -62,6 +64,12 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({
     nebulaRef.current = { nebula, nebulaPalette };
     nebulaPaletteRef.current = nebulaPalette;
   }, [nebula, nebulaPalette]);
+
+  // Hero astrophoto ref — accessible inside RAF without restarting the loop
+  const heroRef = useRef({ heroNebula, heroBitmap });
+  useEffect(() => {
+    heroRef.current = { heroNebula, heroBitmap };
+  }, [heroNebula, heroBitmap]);
 
   // Swap palette immediately without restarting the animation loop
   useEffect(() => {
@@ -377,6 +385,55 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({
 
       // ── Nebula (decomposed packed texture) ─────────────────────────────
       if (NEBULA_ENABLED) {
+        const hero = heroRef.current.heroNebula;
+        const hBmp = heroRef.current.heroBitmap;
+
+        // ── Hero astrophoto base layer ──────────────────────────────────
+        if (hero && hBmp) {
+          const hImgAR = hBmp.width / hBmp.height;
+          const hCanAR = w / h;
+          const fit = hero.fit ?? 'cover';
+          c.globalAlpha = hero.photoOpacity ?? 0.75;
+
+          if (fit === 'fill') {
+            // Stretch to fill — no aspect ratio preservation
+            c.drawImage(hBmp, 0, 0, hBmp.width, hBmp.height, 0, 0, w, h);
+          } else if (fit === 'contain') {
+            // Scale to fit entirely — letterbox/pillarbox with transparent gaps
+            let dw: number, dh: number, dx: number, dy: number;
+            if (hCanAR >= hImgAR) {
+              dh = h;
+              dw = h * hImgAR;
+              dy = 0;
+              dx = (w - dw) / 2;
+            } else {
+              dw = w;
+              dh = w / hImgAR;
+              dx = 0;
+              dy = (h - dh) / 2;
+            }
+            c.drawImage(hBmp, 0, 0, hBmp.width, hBmp.height, dx, dy, dw, dh);
+          } else {
+            // cover (default) — scale to fill, crop the overflow
+            let hSx: number, hSy: number, hSw: number, hSh: number;
+            if (hCanAR >= hImgAR) {
+              hSw = hBmp.width;
+              hSh = hBmp.width / hCanAR;
+              hSx = 0;
+              hSy = (hBmp.height - hSh) / 2;
+            } else {
+              hSh = hBmp.height;
+              hSw = hBmp.height * hCanAR;
+              hSy = 0;
+              hSx = (hBmp.width - hSw) / 2;
+            }
+            c.drawImage(hBmp, hSx, hSy, hSw, hSh, 0, 0, w, h);
+          }
+
+          c.globalAlpha = 1;
+        }
+
+        // ── Procedural nebula (screen-blended over hero, normal mode without) ─
         const bitmap = nebulaRef.current.nebula;
         if (bitmap) {
           const kind = isDark ? `dark-${nebulaPaletteRef.current}` : 'light';
@@ -393,8 +450,20 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({
             );
             nebulaComposedKind = kind;
           }
-          const opacity = isDark ? NEBULA_OPACITY : NEBULA_OPACITY_LIGHT;
-          c.globalAlpha = opacity;
+          const baseOpacity = isDark ? NEBULA_OPACITY : NEBULA_OPACITY_LIGHT;
+          const procOpacity = hero
+            ? (hero.proceduralBlend ?? 0.35) * baseOpacity
+            : baseOpacity;
+          if (hero && hBmp) {
+            // Map 'normal' to Canvas 2D's 'source-over' (CSS uses 'normal', Canvas uses 'source-over')
+            const blendMode = (
+              hero.proceduralBlendMode === 'normal'
+                ? 'source-over'
+                : (hero.proceduralBlendMode ?? 'screen')
+            ) as GlobalCompositeOperation;
+            c.globalCompositeOperation = blendMode;
+          }
+          c.globalAlpha = procOpacity;
           // Cover-crop: preserve texture aspect ratio, center-crop the overflow.
           const texW = nebulaComposed.width;
           const texH = nebulaComposed.height;
@@ -414,6 +483,7 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({
           }
           c.drawImage(nebulaComposed, sx, sy, sw, sh, 0, 0, w, h);
           c.globalAlpha = 1;
+          c.globalCompositeOperation = 'source-over';
         }
       }
 

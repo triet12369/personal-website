@@ -8,7 +8,7 @@ export const DEBUG_FRAMETIME = false;
  * 'webgl'  — always use WebGL (no fallback)
  * 'canvas' — always use Canvas 2D
  */
-export const RENDERER: 'auto' | 'webgl' | 'canvas' = 'webgl';
+export const RENDERER: 'auto' | 'webgl' | 'canvas' = 'auto';
 
 // ─── Stars ────────────────────────────────────────────────────────────────────
 
@@ -35,7 +35,7 @@ export const STAR_TWINKLE_SPEED_MAX = 24;
 /** ±alpha swing during a burst. */
 export const STAR_TWINKLE_AMPLITUDE = 0.2;
 /** Per-second probability that a resting star starts a twinkle burst. */
-export const STAR_TWINKLE_CHANCE = 0.2;
+export const STAR_TWINKLE_CHANCE = 0.1;
 /** Number of full sine cycles per burst before the star goes back to rest. */
 export const STAR_TWINKLE_BURST_CYCLES = 2;
 
