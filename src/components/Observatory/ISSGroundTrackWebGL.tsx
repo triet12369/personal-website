@@ -3,10 +3,12 @@
  * Dynamically imported (ssr: false) from ISSCard.
  */
 
-import React, { FC, useEffect, useRef } from 'react';
+import { Button } from '@mantine/core';
+import { type FC, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
+import { useT } from '../../hooks/useT';
 import type { GroundTrackPoint, ISSPosition } from '../../lib/iss';
 import { latLonToVec3, createEarthMesh, createAtmosphereMesh } from './earthGlobe';
 
@@ -18,12 +20,27 @@ type Props = {
   sunLon?: number;
 };
 
-export const ISSGroundTrackWebGL: FC<Props> = ({ position, track, now, sunLat = 0, sunLon = 0 }) => {
+export const ISSGroundTrackWebGL: FC<Props> = ({
+  position,
+  track,
+  now: _now,
+  sunLat = 0,
+  sunLon = 0,
+}) => {
+  const t = useT();
   const mountRef = useRef<HTMLDivElement>(null);
   // Capture the ISS position at the moment the component mounts (i.e. when the user
   // switches to the 3D tab) so we can aim the camera at it without depending on
   // the frequently-updating `position` prop inside the setup effect.
   const initialPositionRef = useRef(position);
+
+  // Camera follow state — true until the user pans/rotates the globe
+  const [isFollowing, setIsFollowing] = useState(true);
+  const isFollowingRef = useRef(true);
+  const isUserInteractingRef = useRef(false);
+  // Mirror of `position` prop kept up-to-date via a thin effect; read inside
+  // the RAF loop without staleness issues.
+  const positionRef = useRef(position);
   const sceneRef = useRef<{
     renderer: THREE.WebGLRenderer;
     scene: THREE.Scene;
@@ -70,19 +87,31 @@ export const ISSGroundTrackWebGL: FC<Props> = ({ position, track, now, sunLat = 
 
     // ISS marker — sprite using the ClearOutside ISS icon
     const issTexture = new THREE.TextureLoader().load('/images/iss_icon.png');
-    const issMat = new THREE.SpriteMaterial({ map: issTexture, color: 0xffffff, sizeAttenuation: true });
+    const issMat = new THREE.SpriteMaterial({
+      map: issTexture,
+      color: 0xffffff,
+      sizeAttenuation: true,
+    });
     const issMarker = new THREE.Sprite(issMat);
     issMarker.scale.set(0.1, 0.1, 1);
     scene.add(issMarker);
 
     // Track lines
     const pastGeo = new THREE.BufferGeometry();
-    const pastMat = new THREE.LineBasicMaterial({ color: 0x6b7280, opacity: 0.5, transparent: true });
+    const pastMat = new THREE.LineBasicMaterial({
+      color: 0x6b7280,
+      opacity: 0.5,
+      transparent: true,
+    });
     const pastLine = new THREE.Line(pastGeo, pastMat);
     scene.add(pastLine);
 
     const futureGeo = new THREE.BufferGeometry();
-    const futureMat = new THREE.LineBasicMaterial({ color: 0x22d3ee, opacity: 0.8, transparent: true });
+    const futureMat = new THREE.LineBasicMaterial({
+      color: 0x22d3ee,
+      opacity: 0.8,
+      transparent: true,
+    });
     const futureLine = new THREE.Line(futureGeo, futureMat);
     scene.add(futureLine);
 
@@ -91,6 +120,19 @@ export const ISSGroundTrackWebGL: FC<Props> = ({ position, track, now, sunLat = 
     controls.dampingFactor = 0.05;
     controls.minDistance = 1.5;
     controls.maxDistance = 8;
+
+    // Detect pan/rotate (not scroll-zoom) — pointerdown fires only for
+    // click-drag interactions, never for wheel events.
+    const onPanRotateStart = () => {
+      isFollowingRef.current = false;
+      setIsFollowing(false);
+      isUserInteractingRef.current = true;
+    };
+    const onPanRotateEnd = () => {
+      isUserInteractingRef.current = false;
+    };
+    renderer.domElement.addEventListener('pointerdown', onPanRotateStart);
+    window.addEventListener('pointerup', onPanRotateEnd);
 
     // Smooth fly-in: lerp camera from its starting distance (3) to a closer
     // viewing distance (2.2) over ~60 frames (~1 second at 60fps).
@@ -104,10 +146,21 @@ export const ISSGroundTrackWebGL: FC<Props> = ({ position, track, now, sunLat = 
       frameId = requestAnimationFrame(animate);
       if (flyFrame < FLY_FRAMES) {
         const t = flyFrame / FLY_FRAMES;
-        const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+        const eased = 1 - (1 - t) ** 3; // ease-out cubic
         const dist = FLY_START + (FLY_END - FLY_START) * eased;
         camera.position.setLength(dist);
         flyFrame++;
+      } else if (isFollowingRef.current && !isUserInteractingRef.current) {
+        // Smoothly keep the camera aimed at the ISS. We preserve the current
+        // camera distance (so zoom is unaffected) and lerp only the direction.
+        const currentDist = camera.position.length();
+        const pos = positionRef.current;
+        const target = latLonToVec3(pos.lat, pos.lon, 1)
+          .normalize()
+          .multiplyScalar(currentDist);
+        camera.position.lerp(target, 0.025);
+        // Re-normalise to the original distance in case lerp introduces drift
+        camera.position.setLength(currentDist);
       }
       controls.update();
       renderer.render(scene, camera);
@@ -123,11 +176,23 @@ export const ISSGroundTrackWebGL: FC<Props> = ({ position, track, now, sunLat = 
     };
     window.addEventListener('resize', handleResize);
 
-    sceneRef.current = { renderer, scene, camera, controls, issMarker, pastLine, futureLine, frameId, earthMat };
+    sceneRef.current = {
+      renderer,
+      scene,
+      camera,
+      controls,
+      issMarker,
+      pastLine,
+      futureLine,
+      frameId,
+      earthMat,
+    };
 
     return () => {
       cancelAnimationFrame(frameId);
       controls.dispose();
+      renderer.domElement.removeEventListener('pointerdown', onPanRotateStart);
+      window.removeEventListener('pointerup', onPanRotateEnd);
       renderer.dispose();
       earthMeshObj.dispose();
       atmObj.dispose();
@@ -135,6 +200,12 @@ export const ISSGroundTrackWebGL: FC<Props> = ({ position, track, now, sunLat = 
       if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
     };
   }, []);
+
+  // Keep positionRef in sync so the RAF loop always has the latest position
+  // without needing to re-run the scene-init effect.
+  useEffect(() => {
+    positionRef.current = position;
+  }, [position]);
 
   // Update ISS marker position only — runs every 200ms, no geometry reallocation
   useEffect(() => {
@@ -174,5 +245,21 @@ export const ISSGroundTrackWebGL: FC<Props> = ({ position, track, now, sunLat = 
     s.earthMat.uniforms.sunDir.value = latLonToVec3(sunLat, sunLon, 1).normalize();
   }, [sunLat, sunLon]);
 
-  return <div ref={mountRef} style={{ width: '100%', height: '100%' }} />;
+  const handleRefocus = () => {
+    isFollowingRef.current = true;
+    setIsFollowing(true);
+  };
+
+  return (
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <div ref={mountRef} style={{ width: '100%', height: '100%' }} />
+      {!isFollowing && (
+        <div style={{ position: 'absolute', bottom: 12, right: 12 }}>
+          <Button size="xs" variant="light" color="cyan" onClick={handleRefocus}>
+            {t('observatory.refocusISS')}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
 };
