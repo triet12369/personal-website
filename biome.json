@@ -33,7 +33,10 @@
       "recommended": true,
       "correctness": {
         "noUnusedVariables": "warn",
-        "useExhaustiveDependencies": "warn",
+        "useExhaustiveDependencies": {
+          "level": "warn",
+          "fix": "none"
+        },
         "useHookAtTopLevel": "error"
       },
       "suspicious": {

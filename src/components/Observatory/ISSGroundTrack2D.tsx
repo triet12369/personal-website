@@ -89,7 +89,7 @@ const ISSLayers: FC<LayersProps> = ({ position, track }) => {
       pastLine.remove();
       futureLine.remove();
     };
-  }, [map, position.lat, position.lon]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [map]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Move marker + pan every ~200ms — no DOM paint, just coordinate update
   useEffect(() => {
