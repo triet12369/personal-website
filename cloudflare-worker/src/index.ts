@@ -311,7 +311,7 @@ async function handleTle(
   if (cached) {
     const age = Date.now() - new Date(cached.fetched_at).getTime();
     if (age < TLE_TTL_MS) {
-      return json({ line1: cached.line1, line2: cached.line2 });
+      return json({ line1: cached.line1, line2: cached.line2, source: 'cache' });
     }
   }
 
@@ -320,19 +320,19 @@ async function handleTle(
   try {
     const upstream = await fetch(CELESTRAK_TLE_URL);
     if (!upstream.ok) {
-      if (cached) return json({ line1: cached.line1, line2: cached.line2 });
+      if (cached) return json({ line1: cached.line1, line2: cached.line2, source: 'cache' });
       return json({ error: `CelesTrak returned ${upstream.status}` }, 502);
     }
     const text = await upstream.text();
     const lines = text.trim().split('\n').map((l) => l.trim());
     if (lines.length < 3) {
-      if (cached) return json({ line1: cached.line1, line2: cached.line2 });
+      if (cached) return json({ line1: cached.line1, line2: cached.line2, source: 'cache' });
       return json({ error: 'Unexpected TLE format' }, 502);
     }
     line1 = lines[1];
     line2 = lines[2];
   } catch {
-    if (cached) return json({ line1: cached.line1, line2: cached.line2 });
+    if (cached) return json({ line1: cached.line1, line2: cached.line2, source: 'cache' });
     return json({ error: 'Failed to fetch TLE data' }, 503);
   }
 
@@ -344,7 +344,7 @@ async function handleTle(
     .bind('ISS', line1, line2, new Date().toISOString())
     .run();
 
-  return json({ line1, line2 });
+  return json({ line1, line2, source: 'celestrak' });
 }
 
 // ---------------------------------------------------------------------------

@@ -23,11 +23,13 @@ export default async function handler(
     return res.status(503).json({ error: 'Failed to fetch TLE data' });
   }
 
-  const data = await workerRes.json();
+  const data = await workerRes.json() as Record<string, unknown>;
 
   if (!workerRes.ok) {
     return res.status(workerRes.status).json(data);
   }
+
+  console.info(`[/api/tle] source=${data.source}`);
 
   res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=3600');
   return res.status(200).json(data);
