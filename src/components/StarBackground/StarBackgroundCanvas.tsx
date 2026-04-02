@@ -44,14 +44,14 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const el: HTMLCanvasElement      = canvas;
+    const el: HTMLCanvasElement = canvas;
     const c: CanvasRenderingContext2D = ctx;
 
     let w = 0;
     let h = 0;
     let stars: Star[] = [];
     const shootingStars: ShootingStar[] = [];
-    const explosions:    Explosion[]    = [];
+    const explosions: Explosion[] = [];
     let spawnTimer = 0;
 
     // Offscreen canvas holding the per-pixel colour-decomposed nebula.
@@ -62,10 +62,8 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
     function resize() {
       w = el.offsetWidth;
       h = el.offsetHeight;
-      el.width  = w;
+      el.width = w;
       el.height = h;
-      const starCount = Math.min(STAR_COUNT_MAX, Math.round(STAR_DENSITY * w * h / 1_000_000));
-      stars = makeStars(starCount, w, h, paletteRef.current.maxStarAlpha);
     }
 
     let resizeTimer: ReturnType<typeof setTimeout>;
@@ -75,10 +73,19 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
     }
 
     resize();
+    // Build stars once using screen dimensions so mobile browser chrome show/hide
+    // (which changes window.innerHeight) never causes a blank region of sky.
+    const starsW = Math.max(w, screen.availWidth || w);
+    const starsH = Math.max(h, screen.availHeight || h);
+    const starCount = Math.min(
+      STAR_COUNT_MAX,
+      Math.round((STAR_DENSITY * starsW * starsH) / 1_000_000),
+    );
+    stars = makeStars(starCount, starsW, starsH, paletteRef.current.maxStarAlpha);
     window.addEventListener('resize', onResize);
 
     // Randomise S II / O III prominence once per page load (mirrors WebGL)
-    const soFlip      = Math.random() < 0.5;
+    const soFlip = Math.random() < 0.5;
     const nebulaWeights = [
       soFlip ? NEBULA_WEIGHT_SO_LO : NEBULA_WEIGHT_SO_HI,
       NEBULA_WEIGHT_HYDROGEN,
@@ -90,99 +97,173 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
     function nebulaAlpha(v: number): number {
       return Math.max(0, (v - THRESHOLD) / (1 - THRESHOLD));
     }
-    function lerp(a: number, b: number, t: number): number { return a + (b - a) * t; }
-    function lerpRGB(a: [number,number,number], b: [number,number,number], t: number): [number,number,number] {
-      return [lerp(a[0],b[0],t), lerp(a[1],b[1],t), lerp(a[2],b[2],t)];
+    function lerp(a: number, b: number, t: number): number {
+      return a + (b - a) * t;
     }
-    function clamp01(v: number): number { return Math.max(0, Math.min(1, v)); }
+    function lerpRGB(
+      a: [number, number, number],
+      b: [number, number, number],
+      t: number,
+    ): [number, number, number] {
+      return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
+    }
+    function clamp01(v: number): number {
+      return Math.max(0, Math.min(1, v));
+    }
 
-    function darkS2(v: number): [number,number,number] {
-      const stops: [number,[number,number,number]][] = [[0.38,[0.196,0.020,0.000]],[0.52,[0.510,0.118,0.020]],[0.65,[0.824,0.314,0.039]],[0.80,[0.941,0.569,0.157]],[1.00,[1.000,0.784,0.353]]];
+    function darkS2(v: number): [number, number, number] {
+      const stops: [number, [number, number, number]][] = [
+        [0.38, [0.196, 0.02, 0.0]],
+        [0.52, [0.51, 0.118, 0.02]],
+        [0.65, [0.824, 0.314, 0.039]],
+        [0.8, [0.941, 0.569, 0.157]],
+        [1.0, [1.0, 0.784, 0.353]],
+      ];
       if (v <= stops[0][0]) return stops[0][1];
       for (let i = 1; i < stops.length; i++) {
-        if (v <= stops[i][0]) return lerpRGB(stops[i-1][1], stops[i][1], (v - stops[i-1][0]) / (stops[i][0] - stops[i-1][0]));
+        if (v <= stops[i][0])
+          return lerpRGB(
+            stops[i - 1][1],
+            stops[i][1],
+            (v - stops[i - 1][0]) / (stops[i][0] - stops[i - 1][0]),
+          );
       }
-      return stops[stops.length-1][1];
+      return stops[stops.length - 1][1];
     }
-    function darkHa(v: number): [number,number,number] {
-      const stops: [number,[number,number,number]][] = [[0.38,[0.000,0.137,0.039]],[0.52,[0.039,0.353,0.118]],[0.65,[0.098,0.588,0.216]],[0.80,[0.275,0.784,0.353]],[1.00,[0.549,0.902,0.549]]];
+    function darkHa(v: number): [number, number, number] {
+      const stops: [number, [number, number, number]][] = [
+        [0.38, [0.0, 0.137, 0.039]],
+        [0.52, [0.039, 0.353, 0.118]],
+        [0.65, [0.098, 0.588, 0.216]],
+        [0.8, [0.275, 0.784, 0.353]],
+        [1.0, [0.549, 0.902, 0.549]],
+      ];
       if (v <= stops[0][0]) return stops[0][1];
       for (let i = 1; i < stops.length; i++) {
-        if (v <= stops[i][0]) return lerpRGB(stops[i-1][1], stops[i][1], (v - stops[i-1][0]) / (stops[i][0] - stops[i-1][0]));
+        if (v <= stops[i][0])
+          return lerpRGB(
+            stops[i - 1][1],
+            stops[i][1],
+            (v - stops[i - 1][0]) / (stops[i][0] - stops[i - 1][0]),
+          );
       }
-      return stops[stops.length-1][1];
+      return stops[stops.length - 1][1];
     }
-    function darkO3(v: number): [number,number,number] {
-      const stops: [number,[number,number,number]][] = [[0.38,[0.000,0.059,0.216]],[0.52,[0.039,0.216,0.510]],[0.65,[0.078,0.451,0.784]],[0.80,[0.157,0.667,0.902]],[1.00,[0.392,0.843,1.000]]];
+    function darkO3(v: number): [number, number, number] {
+      const stops: [number, [number, number, number]][] = [
+        [0.38, [0.0, 0.059, 0.216]],
+        [0.52, [0.039, 0.216, 0.51]],
+        [0.65, [0.078, 0.451, 0.784]],
+        [0.8, [0.157, 0.667, 0.902]],
+        [1.0, [0.392, 0.843, 1.0]],
+      ];
       if (v <= stops[0][0]) return stops[0][1];
       for (let i = 1; i < stops.length; i++) {
-        if (v <= stops[i][0]) return lerpRGB(stops[i-1][1], stops[i][1], (v - stops[i-1][0]) / (stops[i][0] - stops[i-1][0]));
+        if (v <= stops[i][0])
+          return lerpRGB(
+            stops[i - 1][1],
+            stops[i][1],
+            (v - stops[i - 1][0]) / (stops[i][0] - stops[i - 1][0]),
+          );
       }
-      return stops[stops.length-1][1];
+      return stops[stops.length - 1][1];
     }
-    function lightL0(v: number): [number,number,number] {
-      const stops: [number,[number,number,number]][] = [[0.38,[0.675,0.627,0.576]],[0.65,[0.820,0.792,0.765]],[1.00,[0.965,0.957,0.953]]];
+    function lightL0(v: number): [number, number, number] {
+      const stops: [number, [number, number, number]][] = [
+        [0.38, [0.675, 0.627, 0.576]],
+        [0.65, [0.82, 0.792, 0.765]],
+        [1.0, [0.965, 0.957, 0.953]],
+      ];
       if (v <= stops[0][0]) return stops[0][1];
       for (let i = 1; i < stops.length; i++) {
-        if (v <= stops[i][0]) return lerpRGB(stops[i-1][1], stops[i][1], (v - stops[i-1][0]) / (stops[i][0] - stops[i-1][0]));
+        if (v <= stops[i][0])
+          return lerpRGB(
+            stops[i - 1][1],
+            stops[i][1],
+            (v - stops[i - 1][0]) / (stops[i][0] - stops[i - 1][0]),
+          );
       }
-      return stops[stops.length-1][1];
+      return stops[stops.length - 1][1];
     }
-    function lightL1(v: number): [number,number,number] {
-      const stops: [number,[number,number,number]][] = [[0.38,[0.424,0.376,0.325]],[0.65,[0.604,0.545,0.482]],[1.00,[0.890,0.875,0.859]]];
+    function lightL1(v: number): [number, number, number] {
+      const stops: [number, [number, number, number]][] = [
+        [0.38, [0.424, 0.376, 0.325]],
+        [0.65, [0.604, 0.545, 0.482]],
+        [1.0, [0.89, 0.875, 0.859]],
+      ];
       if (v <= stops[0][0]) return stops[0][1];
       for (let i = 1; i < stops.length; i++) {
-        if (v <= stops[i][0]) return lerpRGB(stops[i-1][1], stops[i][1], (v - stops[i-1][0]) / (stops[i][0] - stops[i-1][0]));
+        if (v <= stops[i][0])
+          return lerpRGB(
+            stops[i - 1][1],
+            stops[i][1],
+            (v - stops[i - 1][0]) / (stops[i][0] - stops[i - 1][0]),
+          );
       }
-      return stops[stops.length-1][1];
+      return stops[stops.length - 1][1];
     }
-    function lightL2(v: number): [number,number,number] {
-      const stops: [number,[number,number,number]][] = [[0.38,[0.604,0.545,0.482]],[0.65,[0.745,0.710,0.671]],[1.00,[0.890,0.875,0.859]]];
+    function lightL2(v: number): [number, number, number] {
+      const stops: [number, [number, number, number]][] = [
+        [0.38, [0.604, 0.545, 0.482]],
+        [0.65, [0.745, 0.71, 0.671]],
+        [1.0, [0.89, 0.875, 0.859]],
+      ];
       if (v <= stops[0][0]) return stops[0][1];
       for (let i = 1; i < stops.length; i++) {
-        if (v <= stops[i][0]) return lerpRGB(stops[i-1][1], stops[i][1], (v - stops[i-1][0]) / (stops[i][0] - stops[i-1][0]));
+        if (v <= stops[i][0])
+          return lerpRGB(
+            stops[i - 1][1],
+            stops[i][1],
+            (v - stops[i - 1][0]) / (stops[i][0] - stops[i - 1][0]),
+          );
       }
-      return stops[stops.length-1][1];
+      return stops[stops.length - 1][1];
     }
 
     // Decompose the packed R/G/B noise bitmap into per-pixel RGBA using the
     // colour gradients matching the GLSL shader.  Called once per bitmap/scheme change.
-    function decomposeNebula(bitmap: ImageBitmap, w0: number, w1: number, w2: number, dark: boolean): HTMLCanvasElement {
+    function decomposeNebula(
+      bitmap: ImageBitmap,
+      w0: number,
+      w1: number,
+      w2: number,
+      dark: boolean,
+    ): HTMLCanvasElement {
       const off = document.createElement('canvas');
-      off.width  = bitmap.width;
+      off.width = bitmap.width;
       off.height = bitmap.height;
       const octx = off.getContext('2d')!;
       octx.drawImage(bitmap, 0, 0);
       const imgData = octx.getImageData(0, 0, bitmap.width, bitmap.height);
       const d = imgData.data;
       for (let i = 0; i < d.length; i += 4) {
-        const v0 = d[i]   / 255;
-        const v1 = d[i+1] / 255;
-        const v2 = d[i+2] / 255;
+        const v0 = d[i] / 255;
+        const v1 = d[i + 1] / 255;
+        const v2 = d[i + 2] / 255;
         const a0 = nebulaAlpha(v0) * w0;
         const a1 = nebulaAlpha(v1) * w1;
         const a2 = nebulaAlpha(v2) * w2;
         const col0 = dark ? darkS2(v0) : lightL0(v0);
         const col1 = dark ? darkHa(v1) : lightL1(v1);
         const col2 = dark ? darkO3(v2) : lightL2(v2);
-        const r = clamp01(col0[0]*a0 + col1[0]*a1 + col2[0]*a2);
-        const g = clamp01(col0[1]*a0 + col1[1]*a1 + col2[1]*a2);
-        const b = clamp01(col0[2]*a0 + col1[2]*a1 + col2[2]*a2);
+        const r = clamp01(col0[0] * a0 + col1[0] * a1 + col2[0] * a2);
+        const g = clamp01(col0[1] * a0 + col1[1] * a1 + col2[1] * a2);
+        const b = clamp01(col0[2] * a0 + col1[2] * a1 + col2[2] * a2);
         const a = clamp01(Math.max(a0, a1, a2));
-        d[i]   = r * 255;
-        d[i+1] = g * 255;
-        d[i+2] = b * 255;
-        d[i+3] = a * 255;
+        d[i] = r * 255;
+        d[i + 1] = g * 255;
+        d[i + 2] = b * 255;
+        d[i + 3] = a * 255;
       }
       octx.putImageData(imgData, 0, 0);
       return off;
     }
 
     const frameTimes = new Float64Array(HUD_SAMPLES);
-    const wallTimes  = new Float64Array(HUD_SAMPLES);
-    let frameIdx  = 0;
+    const wallTimes = new Float64Array(HUD_SAMPLES);
+    let frameIdx = 0;
     let hudFilled = false;
-    let lastWall  = performance.now();
+    let lastWall = performance.now();
 
     function draw(now: DOMHighResTimeStamp) {
       // Measure only the work inside draw(), not the vsync wait before it.
@@ -193,7 +274,7 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
       lastWall = t0;
 
       const palette = paletteRef.current;
-      const isDark  = colorSchemeRef.current === 'dark';
+      const isDark = colorSchemeRef.current === 'dark';
 
       c.clearRect(0, 0, w, h);
 
@@ -203,7 +284,13 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
         if (bitmap) {
           const kind = isDark ? 'dark' : 'light';
           if (nebulaComposedKind !== kind || !nebulaComposed) {
-            nebulaComposed     = decomposeNebula(bitmap, nebulaWeights[0], nebulaWeights[1], nebulaWeights[2], isDark);
+            nebulaComposed = decomposeNebula(
+              bitmap,
+              nebulaWeights[0],
+              nebulaWeights[1],
+              nebulaWeights[2],
+              isDark,
+            );
             nebulaComposedKind = kind;
           }
           const opacity = isDark ? NEBULA_OPACITY : NEBULA_OPACITY_LIGHT;
@@ -211,7 +298,7 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
           // Cover-crop: preserve texture aspect ratio, center-crop the overflow.
           const texW = nebulaComposed.width;
           const texH = nebulaComposed.height;
-          const canvasAR  = w / h;
+          const canvasAR = w / h;
           const textureAR = texW / texH;
           let sx: number, sy: number, sw: number, sh: number;
           if (canvasAR >= textureAR) {
@@ -238,18 +325,23 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
         if (s.twinkleActive) {
           s.twinklePhase += s.twinkleSpeed * dt;
           if (s.twinklePhase >= STAR_TWINKLE_BURST_CYCLES * Math.PI * 2) {
-            s.twinklePhase  = 0;
+            s.twinklePhase = 0;
             s.twinkleActive = false;
-            s.alpha         = s.baseAlpha;
+            s.alpha = s.baseAlpha;
           } else {
-            s.alpha = Math.max(0, Math.min(palette.maxStarAlpha,
-              s.baseAlpha + STAR_TWINKLE_AMPLITUDE * Math.sin(s.twinklePhase)));
+            s.alpha = Math.max(
+              0,
+              Math.min(
+                palette.maxStarAlpha,
+                s.baseAlpha + STAR_TWINKLE_AMPLITUDE * Math.sin(s.twinklePhase),
+              ),
+            );
           }
         } else {
           s.alpha = s.baseAlpha;
           if (Math.random() < STAR_TWINKLE_CHANCE * dt) {
             s.twinkleActive = true;
-            s.twinklePhase  = 0;
+            s.twinklePhase = 0;
           }
         }
       }
@@ -260,9 +352,15 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
       if (NEBULA_ENABLED && nebulaComposed) {
         c.globalCompositeOperation = 'screen';
         for (const s of stars) {
-          const illumR = s.r * STAR_GLOW_FACTOR * STAR_CANVAS_GLOW_SCALE * NEBULA_STAR_ILLUM_RADIUS;
-          const illumA = Math.min(1, s.baseAlpha * NEBULA_STAR_ILLUM_STRENGTH * NEBULA_ILLUM_BOOST * 0.33);
-          const [cr, cg, cb]: [number, number, number] = isDark ? s.color : [200, 180, 150];
+          const illumR =
+            s.r * STAR_GLOW_FACTOR * STAR_CANVAS_GLOW_SCALE * NEBULA_STAR_ILLUM_RADIUS;
+          const illumA = Math.min(
+            1,
+            s.baseAlpha * NEBULA_STAR_ILLUM_STRENGTH * NEBULA_ILLUM_BOOST * 0.33,
+          );
+          const [cr, cg, cb]: [number, number, number] = isDark
+            ? s.color
+            : [200, 180, 150];
           const illumGrad = c.createRadialGradient(s.x, s.y, 0, s.x, s.y, illumR);
           illumGrad.addColorStop(0, `rgba(${cr},${cg},${cb},${illumA.toFixed(4)})`);
           illumGrad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
@@ -277,16 +375,16 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
       // Pass 2 — draw star glows
       for (const s of stars) {
         const glowR = s.r * STAR_GLOW_FACTOR * STAR_CANVAS_GLOW_SCALE;
-        const grad  = c.createRadialGradient(s.x, s.y, 0, s.x, s.y, glowR);
+        const grad = c.createRadialGradient(s.x, s.y, 0, s.x, s.y, glowR);
         if (isDark) {
           const [cr, cg, cb] = s.color;
-          grad.addColorStop(0,    `rgba(${cr},${cg},${cb},${s.alpha})`);
-          grad.addColorStop(0.50, `rgba(${cr},${cg},${cb},${(s.alpha * 0.6).toFixed(3)}`);
-          grad.addColorStop(1,    `rgba(${cr},${cg},${cb},0)`);
+          grad.addColorStop(0, `rgba(${cr},${cg},${cb},${s.alpha})`);
+          grad.addColorStop(0.5, `rgba(${cr},${cg},${cb},${(s.alpha * 0.6).toFixed(3)}`);
+          grad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
         } else {
-          grad.addColorStop(0,    palette.starColor(s.alpha));
-          grad.addColorStop(0.50, palette.starColor(s.alpha * 0.6));
-          grad.addColorStop(1,    palette.starColor(0));
+          grad.addColorStop(0, palette.starColor(s.alpha));
+          grad.addColorStop(0.5, palette.starColor(s.alpha * 0.6));
+          grad.addColorStop(1, palette.starColor(0));
         }
         c.beginPath();
         c.arc(s.x, s.y, glowR, 0, Math.PI * 2);
@@ -297,16 +395,17 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
       // ── Bloom pass (additive) ─────────────────────────────────────────────
       c.globalCompositeOperation = 'lighter';
       for (const s of stars) {
-        const bloomR  = s.r * STAR_GLOW_FACTOR * STAR_CANVAS_GLOW_SCALE * STAR_BLOOM_FACTOR;
-        const bloomA  = s.alpha * STAR_BLOOM_STRENGTH;
-        const grad    = c.createRadialGradient(s.x, s.y, 0, s.x, s.y, bloomR);
+        const bloomR =
+          s.r * STAR_GLOW_FACTOR * STAR_CANVAS_GLOW_SCALE * STAR_BLOOM_FACTOR;
+        const bloomA = s.alpha * STAR_BLOOM_STRENGTH;
+        const grad = c.createRadialGradient(s.x, s.y, 0, s.x, s.y, bloomR);
         if (isDark) {
           const [cr, cg, cb] = s.color;
-          grad.addColorStop(0,   `rgba(${cr},${cg},${cb},${bloomA.toFixed(3)})`);
-          grad.addColorStop(1,   `rgba(${cr},${cg},${cb},0)`);
+          grad.addColorStop(0, `rgba(${cr},${cg},${cb},${bloomA.toFixed(3)})`);
+          grad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
         } else {
-          grad.addColorStop(0,   palette.starColor(bloomA));
-          grad.addColorStop(1,   palette.starColor(0));
+          grad.addColorStop(0, palette.starColor(bloomA));
+          grad.addColorStop(1, palette.starColor(0));
         }
         c.beginPath();
         c.arc(s.x, s.y, bloomR, 0, Math.PI * 2);
@@ -358,16 +457,16 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
         const tailY = ss.y - ss.vy * trailSecs;
 
         const grad = c.createLinearGradient(tailX, tailY, ss.x, ss.y);
-        grad.addColorStop(0,   palette.shootTail(0));
+        grad.addColorStop(0, palette.shootTail(0));
         grad.addColorStop(0.7, palette.shootTail(ss.alpha * 0.6));
-        grad.addColorStop(1,   palette.shootColor(ss.alpha));
+        grad.addColorStop(1, palette.shootColor(ss.alpha));
 
         c.beginPath();
         c.moveTo(tailX, tailY);
         c.lineTo(ss.x, ss.y);
         c.strokeStyle = grad;
-        c.lineWidth   = SHOOT_LINE_WIDTH;
-        c.lineCap     = 'round';
+        c.lineWidth = SHOOT_LINE_WIDTH;
+        c.lineCap = 'round';
         c.stroke();
 
         const glow = c.createRadialGradient(ss.x, ss.y, 0, ss.x, ss.y, SHOOT_GLOW_RADIUS);
@@ -384,11 +483,11 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
 
       // ── Draw explosions ────────────────────────────────────────────────────
       for (let i = explosions.length - 1; i >= 0; i--) {
-        const exp    = explosions[i];
+        const exp = explosions[i];
 
         // Expanding shockwave ring
         if (exp.ringAlpha > 0) {
-          exp.ring     += EXPLOSION_RING_EXPAND * dt;
+          exp.ring += EXPLOSION_RING_EXPAND * dt;
           exp.ringAlpha -= EXPLOSION_RING_FADE * dt;
           c.beginPath();
           c.arc(exp.x, exp.y, exp.ring, 0, Math.PI * 2);
@@ -403,13 +502,16 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
         for (let j = exp.particles.length - 1; j >= 0; j--) {
           const p = exp.particles[j];
           p.alpha -= p.decay * dt;
-          if (p.alpha <= 0) { exp.particles.splice(j, 1); continue; }
+          if (p.alpha <= 0) {
+            exp.particles.splice(j, 1);
+            continue;
+          }
           const drag = Math.pow(EXPLOSION_PARTICLE_DRAG, dt);
           p.vx *= drag;
           p.vy *= drag;
           p.vy += EXPLOSION_PARTICLE_GRAVITY * dt;
-          p.x  += p.vx * dt;
-          p.y  += p.vy * dt;
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
           c.beginPath();
           c.arc(p.x, p.y, p.r, 0, Math.PI * 2);
           c.fillStyle = `rgba(${p.color[0]},${p.color[1]},${p.color[2]},${p.alpha})`;
@@ -424,12 +526,16 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
       // Stamp the end of the actual rendering work (excludes vsync wait).
       const workMs = performance.now() - t0;
       frameTimes[frameIdx] = workMs;
-      wallTimes[frameIdx]  = wallDelta;
+      wallTimes[frameIdx] = wallDelta;
       frameIdx = (frameIdx + 1) % HUD_SAMPLES;
       if (frameIdx === 0) hudFilled = true;
       const sampleCount = hudFilled ? HUD_SAMPLES : Math.max(1, frameIdx);
-      let sumWork = 0, sumWall = 0;
-      for (let i = 0; i < sampleCount; i++) { sumWork += frameTimes[i]; sumWall += wallTimes[i]; }
+      let sumWork = 0,
+        sumWall = 0;
+      for (let i = 0; i < sampleCount; i++) {
+        sumWork += frameTimes[i];
+        sumWall += wallTimes[i];
+      }
       const avgWork = sumWork / sampleCount;
       const avgWall = sumWall / sampleCount;
 

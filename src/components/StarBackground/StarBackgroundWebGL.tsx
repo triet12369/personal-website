@@ -81,29 +81,29 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
     if (!canvas) return;
 
     const rawGl = canvas.getContext('webgl', {
-      alpha:              true,
+      alpha: true,
       premultipliedAlpha: true,
-      antialias:          false,
+      antialias: false,
     }) as WebGLRenderingContext | null;
     if (!rawGl) return;
 
     // Non-null typed aliases — TypeScript doesn't propagate narrowing into closures,
     // so we capture the narrowed values as explicitly-typed consts (same pattern as
     // StarBackgroundCanvas which uses `const el: HTMLCanvasElement = canvas`).
-    const el: HTMLCanvasElement     = canvas;
+    const el: HTMLCanvasElement = canvas;
     const gl: WebGLRenderingContext = rawGl;
 
     // Overlay 2D canvas for the debug HUD (null when overlayRef is not mounted)
     const overlayCtx = overlayRef.current?.getContext('2d') ?? null;
 
-    let pointProg:  WebGLProgram;
-    let bloomProg:  WebGLProgram;
-    let geomProg:   WebGLProgram;
+    let pointProg: WebGLProgram;
+    let bloomProg: WebGLProgram;
+    let geomProg: WebGLProgram;
     let nebulaProg: WebGLProgram | null = null;
     try {
-      pointProg  = createProgram(gl, POINT_VERT,  POINT_FRAG);
-      bloomProg  = createProgram(gl, POINT_VERT,  BLOOM_FRAG);
-      geomProg   = createProgram(gl, GEOM_VERT,   GEOM_FRAG);
+      pointProg = createProgram(gl, POINT_VERT, POINT_FRAG);
+      bloomProg = createProgram(gl, POINT_VERT, BLOOM_FRAG);
+      geomProg = createProgram(gl, GEOM_VERT, GEOM_FRAG);
       if (NEBULA_ENABLED) {
         nebulaProg = createProgram(gl, NEBULA_VERT, NEBULA_FRAG);
       }
@@ -113,52 +113,58 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
 
     // Attribute / uniform locations
     const pLoc = {
-      pos:   gl.getAttribLocation(pointProg,  'a_pos'),
-      color: gl.getAttribLocation(pointProg,  'a_color'),
-      size:  gl.getAttribLocation(pointProg,  'a_size'),
-      res:   gl.getUniformLocation(pointProg, 'u_res')!,
+      pos: gl.getAttribLocation(pointProg, 'a_pos'),
+      color: gl.getAttribLocation(pointProg, 'a_color'),
+      size: gl.getAttribLocation(pointProg, 'a_size'),
+      res: gl.getUniformLocation(pointProg, 'u_res')!,
     };
     const bLoc = {
-      pos:   gl.getAttribLocation(bloomProg,  'a_pos'),
-      color: gl.getAttribLocation(bloomProg,  'a_color'),
-      size:  gl.getAttribLocation(bloomProg,  'a_size'),
-      res:   gl.getUniformLocation(bloomProg, 'u_res')!,
+      pos: gl.getAttribLocation(bloomProg, 'a_pos'),
+      color: gl.getAttribLocation(bloomProg, 'a_color'),
+      size: gl.getAttribLocation(bloomProg, 'a_size'),
+      res: gl.getUniformLocation(bloomProg, 'u_res')!,
     };
     const gLoc = {
-      pos:   gl.getAttribLocation(geomProg,  'a_pos'),
-      color: gl.getAttribLocation(geomProg,  'a_color'),
-      res:   gl.getUniformLocation(geomProg, 'u_res')!,
+      pos: gl.getAttribLocation(geomProg, 'a_pos'),
+      color: gl.getAttribLocation(geomProg, 'a_color'),
+      res: gl.getUniformLocation(geomProg, 'u_res')!,
     };
     // Nebula program locations cached once (looked up every frame otherwise)
-    const nLoc = nebulaProg ? {
-      pos:       gl.getAttribLocation(nebulaProg,  'a_pos'),
-      nebula:    gl.getUniformLocation(nebulaProg, 'u_nebula')!,
-      opacity:   gl.getUniformLocation(nebulaProg, 'u_opacity')!,
-      light:     gl.getUniformLocation(nebulaProg, 'u_light')!,
-      w0:        gl.getUniformLocation(nebulaProg, 'u_w0')!,
-      w1:        gl.getUniformLocation(nebulaProg, 'u_w1')!,
-      w2:        gl.getUniformLocation(nebulaProg, 'u_w2')!,
-      uvOffset:  gl.getUniformLocation(nebulaProg, 'u_uv_offset')!,
-      uvScale:   gl.getUniformLocation(nebulaProg, 'u_uv_scale')!,
-      starLight: gl.getUniformLocation(nebulaProg, 'u_star_light')!,
-      illumBoost:gl.getUniformLocation(nebulaProg, 'u_illum_boost')!,
-    } : null;
+    const nLoc = nebulaProg
+      ? {
+          pos: gl.getAttribLocation(nebulaProg, 'a_pos'),
+          nebula: gl.getUniformLocation(nebulaProg, 'u_nebula')!,
+          opacity: gl.getUniformLocation(nebulaProg, 'u_opacity')!,
+          light: gl.getUniformLocation(nebulaProg, 'u_light')!,
+          w0: gl.getUniformLocation(nebulaProg, 'u_w0')!,
+          w1: gl.getUniformLocation(nebulaProg, 'u_w1')!,
+          w2: gl.getUniformLocation(nebulaProg, 'u_w2')!,
+          uvOffset: gl.getUniformLocation(nebulaProg, 'u_uv_offset')!,
+          uvScale: gl.getUniformLocation(nebulaProg, 'u_uv_scale')!,
+          starLight: gl.getUniformLocation(nebulaProg, 'u_star_light')!,
+          illumBoost: gl.getUniformLocation(nebulaProg, 'u_illum_boost')!,
+        }
+      : null;
 
     // Randomly assign S II / O III prominence — H-α always wins.
     // Each page load one of S/O is more prominent than the other.
     const soFlipped = Math.random() < 0.5;
-    const nebulaW0 = soFlipped ? NEBULA_WEIGHT_SO_LO : NEBULA_WEIGHT_SO_HI;  // S II
-    const nebulaW1 = NEBULA_WEIGHT_HYDROGEN;                                  // H-α
-    const nebulaW2 = soFlipped ? NEBULA_WEIGHT_SO_HI : NEBULA_WEIGHT_SO_LO;  // O III
+    const nebulaW0 = soFlipped ? NEBULA_WEIGHT_SO_LO : NEBULA_WEIGHT_SO_HI; // S II
+    const nebulaW1 = NEBULA_WEIGHT_HYDROGEN; // H-α
+    const nebulaW2 = soFlipped ? NEBULA_WEIGHT_SO_HI : NEBULA_WEIGHT_SO_LO; // O III
 
-    const ptBuf     = gl.createBuffer()!;
-    const geomBuf   = gl.createBuffer()!;
+    const ptBuf = gl.createBuffer()!;
+    const geomBuf = gl.createBuffer()!;
 
     // ── Nebula fullscreen quad (static, uploaded once) ────────────────────────
     // NDC corners: bottom-left, bottom-right, top-left, top-right (TRIANGLE_STRIP)
     const nebulaQuadBuf = gl.createBuffer()!;
     gl.bindBuffer(gl.ARRAY_BUFFER, nebulaQuadBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1,  1, -1,  -1, 1,  1, 1]), gl.STATIC_DRAW);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
+      gl.STATIC_DRAW,
+    );
 
     // Single packed texture (null until bitmap arrives; re-uploaded on theme switch)
     let nebulaTex: WebGLTexture | null = null;
@@ -169,7 +175,17 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
     // brightness where stars cluster (compounding effect).
     const illumTex = gl.createTexture()!;
     gl.bindTexture(gl.TEXTURE_2D, illumTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      1,
+      1,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      new Uint8Array([0, 0, 0, 0]),
+    );
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -177,7 +193,13 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
     gl.bindTexture(gl.TEXTURE_2D, null);
     const illumFBO = gl.createFramebuffer()!;
     gl.bindFramebuffer(gl.FRAMEBUFFER, illumFBO);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, illumTex, 0);
+    gl.framebufferTexture2D(
+      gl.FRAMEBUFFER,
+      gl.COLOR_ATTACHMENT0,
+      gl.TEXTURE_2D,
+      illumTex,
+      0,
+    );
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
     // Guard: check max texture size so we don't exceed GPU limits
@@ -191,8 +213,8 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
     // Points: [x, y, r, g, b, a, size] × N
     // Worst-case size is max(stars, particles-per-frame). Particles can stack across
     // multiple simultaneous explosions (one per shooting star), so we size for that.
-    const PT_MAX  = Math.max(STAR_COUNT_MAX, SHOOT_MAX_COUNT * EXPLOSION_PARTICLE_COUNT);
-    const ptData    = new Float32Array(PT_MAX * 7);
+    const PT_MAX = Math.max(STAR_COUNT_MAX, SHOOT_MAX_COUNT * EXPLOSION_PARTICLE_COUNT);
+    const ptData = new Float32Array(PT_MAX * 7);
     // Bloom: one entry per star (same layout as ptData, larger sprites + scaled alpha)
     const bloomData = new Float32Array(STAR_COUNT_MAX * 7);
     // Illumination: wide additive halos for each star, accumulated into illumFBO
@@ -200,24 +222,25 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
     // Trails: 6 verts × 6 floats per shooting star
     const trailData = new Float32Array(SHOOT_MAX_COUNT * 6 * 6);
     // Ring: 2*(RING_SEGS+1) verts × 6 floats — reused per explosion
-    const ringData  = new Float32Array(RING_VERT_COUNT * 6);
+    const ringData = new Float32Array(RING_VERT_COUNT * 6);
 
     let w = 0;
     let h = 0;
     let stars: Star[] = [];
     const shootingStars: ShootingStar[] = [];
-    const explosions:    Explosion[]    = [];
+    const explosions: Explosion[] = [];
     let spawnTimer = 0;
 
     function resize() {
       w = el.offsetWidth;
       h = el.offsetHeight;
-      el.width  = w;
+      el.width = w;
       el.height = h;
       gl.viewport(0, 0, w, h);
-      if (overlayRef.current) { overlayRef.current.width = w; overlayRef.current.height = h; }
-      const starCount = Math.min(STAR_COUNT_MAX, Math.round(STAR_DENSITY * w * h / 1_000_000));
-      stars = makeStars(starCount, w, h, paletteRef.current.maxStarAlpha);
+      if (overlayRef.current) {
+        overlayRef.current.width = w;
+        overlayRef.current.height = h;
+      }
       // Re-allocate the illumination FBO texture to match the new canvas dimensions.
       gl.bindTexture(gl.TEXTURE_2D, illumTex);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
@@ -231,6 +254,15 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
     }
 
     resize();
+    // Build stars once using screen dimensions so mobile browser chrome show/hide
+    // (which changes window.innerHeight) never causes a blank region of sky.
+    const starsW = Math.max(w, screen.availWidth || w);
+    const starsH = Math.max(h, screen.availHeight || h);
+    const starCount = Math.min(
+      STAR_COUNT_MAX,
+      Math.round((STAR_DENSITY * starsW * starsH) / 1_000_000),
+    );
+    stars = makeStars(starCount, starsW, starsH, paletteRef.current.maxStarAlpha);
     window.addEventListener('resize', onResize);
 
     // ── Draw helpers ──────────────────────────────────────────────────────────
@@ -243,11 +275,11 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
       gl.bufferData(gl.ARRAY_BUFFER, data.subarray(0, count * 7), gl.DYNAMIC_DRAW);
       const stride = 7 * 4;
       gl.enableVertexAttribArray(pLoc.pos);
-      gl.vertexAttribPointer(pLoc.pos,   2, gl.FLOAT, false, stride, 0);
+      gl.vertexAttribPointer(pLoc.pos, 2, gl.FLOAT, false, stride, 0);
       gl.enableVertexAttribArray(pLoc.color);
       gl.vertexAttribPointer(pLoc.color, 4, gl.FLOAT, false, stride, 2 * 4);
       gl.enableVertexAttribArray(pLoc.size);
-      gl.vertexAttribPointer(pLoc.size,  1, gl.FLOAT, false, stride, 6 * 4);
+      gl.vertexAttribPointer(pLoc.size, 1, gl.FLOAT, false, stride, 6 * 4);
       gl.drawArrays(gl.POINTS, 0, count);
     }
 
@@ -261,7 +293,7 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
       if (pLoc.size >= 0) gl.disableVertexAttribArray(pLoc.size);
       const stride = 6 * 4;
       gl.enableVertexAttribArray(gLoc.pos);
-      gl.vertexAttribPointer(gLoc.pos,   2, gl.FLOAT, false, stride, 0);
+      gl.vertexAttribPointer(gLoc.pos, 2, gl.FLOAT, false, stride, 0);
       gl.enableVertexAttribArray(gLoc.color);
       gl.vertexAttribPointer(gLoc.color, 4, gl.FLOAT, false, stride, 2 * 4);
       gl.drawArrays(mode, 0, count);
@@ -270,10 +302,10 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
     // ── Main draw loop ────────────────────────────────────────────────────────
 
     const frameTimes = new Float64Array(HUD_SAMPLES);
-    const wallTimes  = new Float64Array(HUD_SAMPLES);
-    let frameIdx  = 0;
+    const wallTimes = new Float64Array(HUD_SAMPLES);
+    let frameIdx = 0;
     let hudFilled = false;
-    let lastWall  = performance.now();
+    let lastWall = performance.now();
 
     function draw(_now: DOMHighResTimeStamp) {
       // Measure only the work inside draw(), not the vsync wait before it.
@@ -282,8 +314,8 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
       lastWall = t0;
 
       const palette = paletteRef.current;
-      const isDark  = colorSchemeRef.current === 'dark';
-      const scheme  = isDark ? 'dark' : 'light';
+      const isDark = colorSchemeRef.current === 'dark';
+      const scheme = isDark ? 'dark' : 'light';
 
       // ── Star-illumination FBO pre-pass ────────────────────────────────────────
       // Render wide soft halos for every star into the illumFBO with ADDITIVE
@@ -303,7 +335,7 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
             ? [s.color[0] / 255, s.color[1] / 255, s.color[2] / 255]
             : [1.0, 1.0, 1.0];
           const ib = in2 * 7;
-          illumData[ib]     = s.x;
+          illumData[ib] = s.x;
           illumData[ib + 1] = s.y;
           illumData[ib + 2] = sr;
           illumData[ib + 3] = sg;
@@ -318,11 +350,11 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
         gl.bufferData(gl.ARRAY_BUFFER, illumData.subarray(0, in2 * 7), gl.DYNAMIC_DRAW);
         const iStride = 7 * 4;
         gl.enableVertexAttribArray(bLoc.pos);
-        gl.vertexAttribPointer(bLoc.pos,   2, gl.FLOAT, false, iStride, 0);
+        gl.vertexAttribPointer(bLoc.pos, 2, gl.FLOAT, false, iStride, 0);
         gl.enableVertexAttribArray(bLoc.color);
         gl.vertexAttribPointer(bLoc.color, 4, gl.FLOAT, false, iStride, 2 * 4);
         gl.enableVertexAttribArray(bLoc.size);
-        gl.vertexAttribPointer(bLoc.size,  1, gl.FLOAT, false, iStride, 6 * 4);
+        gl.vertexAttribPointer(bLoc.size, 1, gl.FLOAT, false, iStride, 6 * 4);
         gl.drawArrays(gl.POINTS, 0, in2);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); // restore premultiplied blend
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -357,21 +389,21 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
           // Cover-crop UV: preserve texture aspect ratio, center-crop the overflow.
           const texW = nebulaRef.current.nebula!.width;
           const texH = nebulaRef.current.nebula!.height;
-          const canvasAR  = w / h;
+          const canvasAR = w / h;
           const textureAR = texW / texH;
           let uvScaleX: number, uvScaleY: number, uvOffX: number, uvOffY: number;
           if (canvasAR >= textureAR) {
             // Canvas is wider — texture fills width, crop height
             uvScaleX = 1.0;
             uvScaleY = textureAR / canvasAR;
-            uvOffX   = 0.0;
-            uvOffY   = (1.0 - uvScaleY) / 2.0;
+            uvOffX = 0.0;
+            uvOffY = (1.0 - uvScaleY) / 2.0;
           } else {
             // Canvas is taller — texture fills height, crop width
             uvScaleY = 1.0;
             uvScaleX = canvasAR / textureAR;
-            uvOffY   = 0.0;
-            uvOffX   = (1.0 - uvScaleX) / 2.0;
+            uvOffY = 0.0;
+            uvOffX = (1.0 - uvScaleX) / 2.0;
           }
 
           // Bind packed nebula texture to TEXTURE0
@@ -385,12 +417,12 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
           gl.uniform1f(nLoc.illumBoost, NEBULA_ILLUM_BOOST);
           gl.activeTexture(gl.TEXTURE0); // leave TEXTURE0 active for subsequent ops
           gl.uniform1f(nLoc.opacity, isDark ? NEBULA_OPACITY : NEBULA_OPACITY_LIGHT);
-          gl.uniform1f(nLoc.light,   isDark ? 0.0 : 1.0);
+          gl.uniform1f(nLoc.light, isDark ? 0.0 : 1.0);
           gl.uniform1f(nLoc.w0, nebulaW0);
           gl.uniform1f(nLoc.w1, nebulaW1);
           gl.uniform1f(nLoc.w2, nebulaW2);
           gl.uniform2f(nLoc.uvOffset, uvOffX, uvOffY);
-          gl.uniform2f(nLoc.uvScale,  uvScaleX, uvScaleY);
+          gl.uniform2f(nLoc.uvScale, uvScaleX, uvScaleY);
 
           gl.bindBuffer(gl.ARRAY_BUFFER, nebulaQuadBuf);
           gl.enableVertexAttribArray(nLoc.pos);
@@ -412,18 +444,23 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
         if (s.twinkleActive) {
           s.twinklePhase += s.twinkleSpeed * dt;
           if (s.twinklePhase >= STAR_TWINKLE_BURST_CYCLES * Math.PI * 2) {
-            s.twinklePhase  = 0;
+            s.twinklePhase = 0;
             s.twinkleActive = false;
-            s.alpha         = s.baseAlpha;
+            s.alpha = s.baseAlpha;
           } else {
-            s.alpha = Math.max(0, Math.min(palette.maxStarAlpha,
-              s.baseAlpha + STAR_TWINKLE_AMPLITUDE * Math.sin(s.twinklePhase)));
+            s.alpha = Math.max(
+              0,
+              Math.min(
+                palette.maxStarAlpha,
+                s.baseAlpha + STAR_TWINKLE_AMPLITUDE * Math.sin(s.twinklePhase),
+              ),
+            );
           }
         } else {
           s.alpha = s.baseAlpha;
           if (Math.random() < STAR_TWINKLE_CHANCE * dt) {
             s.twinkleActive = true;
-            s.twinklePhase  = 0;
+            s.twinklePhase = 0;
           }
         }
 
@@ -434,14 +471,14 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
           : palette.starRGB;
 
         const b = sn * 7;
-        ptData[b]     = s.x;
+        ptData[b] = s.x;
         ptData[b + 1] = s.y;
         ptData[b + 2] = sr;
         ptData[b + 3] = sg;
         ptData[b + 4] = sb;
         ptData[b + 5] = s.alpha;
         ptData[b + 6] = s.r * STAR_GLOW_FACTOR * 2;
-        bloomData[b]     = s.x;
+        bloomData[b] = s.x;
         bloomData[b + 1] = s.y;
         bloomData[b + 2] = sr;
         bloomData[b + 3] = sg;
@@ -460,11 +497,11 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
       gl.bufferData(gl.ARRAY_BUFFER, bloomData.subarray(0, sn * 7), gl.DYNAMIC_DRAW);
       const bloomStride = 7 * 4;
       gl.enableVertexAttribArray(bLoc.pos);
-      gl.vertexAttribPointer(bLoc.pos,   2, gl.FLOAT, false, bloomStride, 0);
+      gl.vertexAttribPointer(bLoc.pos, 2, gl.FLOAT, false, bloomStride, 0);
       gl.enableVertexAttribArray(bLoc.color);
       gl.vertexAttribPointer(bLoc.color, 4, gl.FLOAT, false, bloomStride, 2 * 4);
       gl.enableVertexAttribArray(bLoc.size);
-      gl.vertexAttribPointer(bLoc.size,  1, gl.FLOAT, false, bloomStride, 6 * 4);
+      gl.vertexAttribPointer(bLoc.size, 1, gl.FLOAT, false, bloomStride, 6 * 4);
       gl.drawArrays(gl.POINTS, 0, sn);
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
@@ -479,14 +516,17 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
 
       // ── Update shooting stars, build trail geometry & glow points ──────────
       let trailVerts = 0;
-      let glowN      = 0;
+      let glowN = 0;
 
       for (let i = shootingStars.length - 1; i >= 0; i--) {
         const ss = shootingStars[i];
 
         if (ss.state === 'in') {
           ss.alpha += SHOOT_FADE_IN * dt;
-          if (ss.alpha >= ss.maxAlpha) { ss.alpha = ss.maxAlpha; ss.state = 'hold'; }
+          if (ss.alpha >= ss.maxAlpha) {
+            ss.alpha = ss.maxAlpha;
+            ss.state = 'hold';
+          }
         } else if (ss.state === 'hold') {
           if (Math.hypot(ss.x, ss.y) > Math.min(w, h) * ss.holdDistFrac) ss.state = 'out';
         } else {
@@ -504,17 +544,17 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
         }
 
         // ── Trail quad (2 triangles, 6 vertices) ───────────────────────────
-        const speed  = Math.hypot(ss.vx, ss.vy);
+        const speed = Math.hypot(ss.vx, ss.vy);
         const trailSecs = ss.trailLength / (speed || 1);
-        const tailX  = ss.x - ss.vx * trailSecs;
-        const tailY  = ss.y - ss.vy * trailSecs;
-        const hw     = SHOOT_LINE_WIDTH / 2;
-        const px     = (-ss.vy / speed) * hw;
-        const py     = (ss.vx  / speed) * hw;
+        const tailX = ss.x - ss.vx * trailSecs;
+        const tailY = ss.y - ss.vy * trailSecs;
+        const hw = SHOOT_LINE_WIDTH / 2;
+        const px = (-ss.vy / speed) * hw;
+        const py = (ss.vx / speed) * hw;
 
         const [tr, tg, tb] = palette.shootTailRGB;
         const [hr, hg, hb] = palette.shootColorRGB;
-        const a            = ss.alpha;
+        const a = ss.alpha;
 
         // 4 corner positions: v0=tail-perp, v1=tail+perp, v2=head-perp, v3=head+perp
         // Two triangles: (v0,v2,v1), (v1,v2,v3)
@@ -522,23 +562,30 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
         const corners: [V, V, V, V] = [
           [tailX - px, tailY - py, tr, tg, tb, 0],
           [tailX + px, tailY + py, tr, tg, tb, 0],
-          [ss.x  - px, ss.y  - py, hr, hg, hb, a],
-          [ss.x  + px, ss.y  + py, hr, hg, hb, a],
+          [ss.x - px, ss.y - py, hr, hg, hb, a],
+          [ss.x + px, ss.y + py, hr, hg, hb, a],
         ];
         for (const vi of [0, 2, 1, 1, 2, 3] as const) {
-          const v  = corners[vi];
+          const v = corners[vi];
           const tb2 = trailVerts * 6;
-          trailData[tb2]     = v[0]; trailData[tb2 + 1] = v[1];
-          trailData[tb2 + 2] = v[2]; trailData[tb2 + 3] = v[3];
-          trailData[tb2 + 4] = v[4]; trailData[tb2 + 5] = v[5];
+          trailData[tb2] = v[0];
+          trailData[tb2 + 1] = v[1];
+          trailData[tb2 + 2] = v[2];
+          trailData[tb2 + 3] = v[3];
+          trailData[tb2 + 4] = v[4];
+          trailData[tb2 + 5] = v[5];
           trailVerts++;
         }
 
         // ── Glow point ─────────────────────────────────────────────────────
         const gb = glowN * 7;
-        ptData[gb]     = ss.x;  ptData[gb + 1] = ss.y;
-        ptData[gb + 2] = hr;    ptData[gb + 3] = hg;   ptData[gb + 4] = hb;
-        ptData[gb + 5] = a;     ptData[gb + 6] = SHOOT_GLOW_RADIUS * 2;
+        ptData[gb] = ss.x;
+        ptData[gb + 1] = ss.y;
+        ptData[gb + 2] = hr;
+        ptData[gb + 3] = hg;
+        ptData[gb + 4] = hb;
+        ptData[gb + 5] = a;
+        ptData[gb + 6] = SHOOT_GLOW_RADIUS * 2;
         glowN++;
 
         ss.x += ss.vx * dt;
@@ -558,25 +605,33 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
 
         // Expanding shockwave ring (triangle-strip annulus, per-explosion draw call)
         if (exp.ringAlpha > 0) {
-          exp.ring     += EXPLOSION_RING_EXPAND * dt;
+          exp.ring += EXPLOSION_RING_EXPAND * dt;
           exp.ringAlpha -= EXPLOSION_RING_FADE * dt;
-          const ra      = Math.max(0, exp.ringAlpha);
-          const rw      = 0.6; // half-width matching the canvas lineWidth=1.2
-          const innerR  = Math.max(0, exp.ring - rw);
-          const outerR  = exp.ring + rw;
+          const ra = Math.max(0, exp.ringAlpha);
+          const rw = 0.6; // half-width matching the canvas lineWidth=1.2
+          const innerR = Math.max(0, exp.ring - rw);
+          const outerR = exp.ring + rw;
 
           for (let s = 0; s <= RING_SEGS; s++) {
             const angle = (s / RING_SEGS) * Math.PI * 2;
-            const cos   = Math.cos(angle);
-            const sin   = Math.sin(angle);
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
             // inner vertex
             let b = s * 2 * 6;
-            ringData[b]     = exp.x + cos * innerR; ringData[b + 1] = exp.y + sin * innerR;
-            ringData[b + 2] = rr;  ringData[b + 3] = rg;  ringData[b + 4] = rb; ringData[b + 5] = ra;
+            ringData[b] = exp.x + cos * innerR;
+            ringData[b + 1] = exp.y + sin * innerR;
+            ringData[b + 2] = rr;
+            ringData[b + 3] = rg;
+            ringData[b + 4] = rb;
+            ringData[b + 5] = ra;
             // outer vertex
             b += 6;
-            ringData[b]     = exp.x + cos * outerR; ringData[b + 1] = exp.y + sin * outerR;
-            ringData[b + 2] = rr;  ringData[b + 3] = rg;  ringData[b + 4] = rb; ringData[b + 5] = ra;
+            ringData[b] = exp.x + cos * outerR;
+            ringData[b + 1] = exp.y + sin * outerR;
+            ringData[b + 2] = rr;
+            ringData[b + 3] = rg;
+            ringData[b + 4] = rb;
+            ringData[b + 5] = ra;
           }
           drawGeom(ringData, RING_VERT_COUNT, gl.TRIANGLE_STRIP);
         }
@@ -585,18 +640,24 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
         for (let j = exp.particles.length - 1; j >= 0; j--) {
           const p = exp.particles[j];
           p.alpha -= p.decay * dt;
-          if (p.alpha <= 0) { exp.particles.splice(j, 1); continue; }
+          if (p.alpha <= 0) {
+            exp.particles.splice(j, 1);
+            continue;
+          }
           const drag = Math.pow(EXPLOSION_PARTICLE_DRAG, dt);
           p.vx *= drag;
           p.vy *= drag;
           p.vy += EXPLOSION_PARTICLE_GRAVITY * dt;
-          p.x  += p.vx * dt;
-          p.y  += p.vy * dt;
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
 
           const pb = particleN * 7;
-          ptData[pb]     = p.x;              ptData[pb + 1] = p.y;
-          ptData[pb + 2] = p.color[0] / 255; ptData[pb + 3] = p.color[1] / 255;
-          ptData[pb + 4] = p.color[2] / 255; ptData[pb + 5] = p.alpha;
+          ptData[pb] = p.x;
+          ptData[pb + 1] = p.y;
+          ptData[pb + 2] = p.color[0] / 255;
+          ptData[pb + 3] = p.color[1] / 255;
+          ptData[pb + 4] = p.color[2] / 255;
+          ptData[pb + 5] = p.alpha;
           ptData[pb + 6] = p.r * 2;
           particleN++;
         }
@@ -611,12 +672,16 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
       // Stamp the end of the actual rendering work (excludes vsync wait).
       const workMs = performance.now() - t0;
       frameTimes[frameIdx] = workMs;
-      wallTimes[frameIdx]  = wallDelta;
+      wallTimes[frameIdx] = wallDelta;
       frameIdx = (frameIdx + 1) % HUD_SAMPLES;
       if (frameIdx === 0) hudFilled = true;
       const sampleCount = hudFilled ? HUD_SAMPLES : Math.max(1, frameIdx);
-      let sumWork = 0, sumWall = 0;
-      for (let i = 0; i < sampleCount; i++) { sumWork += frameTimes[i]; sumWall += wallTimes[i]; }
+      let sumWork = 0,
+        sumWall = 0;
+      for (let i = 0; i < sampleCount; i++) {
+        sumWork += frameTimes[i];
+        sumWall += wallTimes[i];
+      }
       const avgWork = sumWork / sampleCount;
       const avgWall = sumWall / sampleCount;
 
