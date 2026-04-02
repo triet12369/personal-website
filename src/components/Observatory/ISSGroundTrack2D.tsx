@@ -7,7 +7,7 @@
  * never flash.
  */
 
-import React, { FC, useEffect, useRef } from 'react';
+import { type FC, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -15,7 +15,7 @@ import 'leaflet/dist/leaflet.css';
 import type { GroundTrackPoint, ISSPosition } from '../../lib/iss';
 
 // Fix missing default icon paths broken by webpack
-delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)['_getIconUrl'];
+delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -34,6 +34,32 @@ type LayersProps = {
   track: GroundTrackPoint[];
 };
 
+/**
+ * Split a path into segments at antimeridian crossings (longitude jump > 180°).
+ * Leaflet accepts nested arrays for multi-segment polylines, which prevents the
+ * horizontal-line artifact when the ISS crosses the 180° meridian.
+ */
+function splitAtAntimeridian(points: [number, number][]): [number, number][][] {
+  const segments: [number, number][][] = [];
+  let current: [number, number][] = [];
+  for (let i = 0; i < points.length; i++) {
+    if (i === 0) {
+      current.push(points[i]);
+    } else {
+      const prevLon = points[i - 1][1];
+      const currLon = points[i][1];
+      if (Math.abs(currLon - prevLon) > 180) {
+        segments.push(current);
+        current = [points[i]];
+      } else {
+        current.push(points[i]);
+      }
+    }
+  }
+  if (current.length > 0) segments.push(current);
+  return segments;
+}
+
 /** Inner component: has access to the Leaflet map context and manages all layers imperatively. */
 const ISSLayers: FC<LayersProps> = ({ position, track }) => {
   const map = useMap();
@@ -44,8 +70,17 @@ const ISSLayers: FC<LayersProps> = ({ position, track }) => {
   // Create layers once on mount; remove on unmount
   useEffect(() => {
     const marker = L.marker([position.lat, position.lon], { icon: ISS_ICON }).addTo(map);
-    const pastLine = L.polyline([], { color: '#6b7280', weight: 1.5, dashArray: '4 4', opacity: 0.5 }).addTo(map);
-    const futureLine = L.polyline([], { color: '#22d3ee', weight: 2, opacity: 0.8 }).addTo(map);
+    const pastLine = L.polyline([], {
+      color: '#6b7280',
+      weight: 1.5,
+      dashArray: '4 4',
+      opacity: 0.5,
+    }).addTo(map);
+    const futureLine = L.polyline([], {
+      color: '#22d3ee',
+      weight: 2,
+      opacity: 0.8,
+    }).addTo(map);
     markerRef.current = marker;
     pastLineRef.current = pastLine;
     futureLineRef.current = futureLine;
@@ -54,7 +89,7 @@ const ISSLayers: FC<LayersProps> = ({ position, track }) => {
       pastLine.remove();
       futureLine.remove();
     };
-  }, [map]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [map, position.lat, position.lon]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Move marker + pan every ~200ms — no DOM paint, just coordinate update
   useEffect(() => {
@@ -73,8 +108,8 @@ const ISSLayers: FC<LayersProps> = ({ position, track }) => {
     const future: [number, number][] = track
       .filter((p) => p.time.getTime() > nowMs)
       .map((p) => [p.lat, p.lon]);
-    pastLineRef.current.setLatLngs(past);
-    futureLineRef.current.setLatLngs(future);
+    pastLineRef.current.setLatLngs(splitAtAntimeridian(past));
+    futureLineRef.current.setLatLngs(splitAtAntimeridian(future));
   }, [track]);
 
   return null;
