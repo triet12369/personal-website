@@ -173,7 +173,7 @@ export const MoonPhaseWebGL: FC<Props> = ({ phaseAngle, latitude, debug = false 
 
     loader.load('/textures/moon_displacement.jpg', (tex) => {
       material.bumpMap = tex;
-      material.bumpScale = 0.06;
+      material.bumpScale = 2.0;
       material.needsUpdate = true;
       renderer.render(scene, camera);
     });
