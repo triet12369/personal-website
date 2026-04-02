@@ -1,7 +1,7 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 
-const COVER_EXTS = ['png', 'jpg', 'jpeg', 'webp', 'gif'];
+const COVER_EXTS = ['webp', 'png', 'jpg', 'jpeg', 'gif'];
 
 const CONTENT_ROOT = path.join(process.cwd(), 'src/content');
 const PUBLIC_ROOT = path.join(process.cwd(), 'public');
@@ -12,9 +12,7 @@ const PUBLIC_ROOT = path.join(process.cwd(), 'public');
  * when no filename is given.
  */
 export function resolveContentImage(dir: string, filename?: string): string | undefined {
-  const candidates = filename
-    ? [filename]
-    : COVER_EXTS.map((ext) => `cover.${ext}`);
+  const candidates = filename ? [filename] : COVER_EXTS.map((ext) => `cover.${ext}`);
 
   for (const candidate of candidates) {
     const srcPath = path.join(dir, candidate);

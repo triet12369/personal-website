@@ -15,26 +15,26 @@
  *    src/components/StarBackground/config.ts
  */
 
-import { deflateSync }             from 'zlib';
-import { mkdirSync, writeFileSync, readdirSync, rmSync } from 'fs';
-import { join, dirname }           from 'path';
-import { fileURLToPath }           from 'url';
+import { mkdirSync, writeFileSync, readdirSync, rmSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import sharp from 'sharp';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const NEBULA_BAKED_COUNT  = 12;    // number of variants to bake
-const NEBULA_LAYER_COUNT  = 3;    // independent noise layers packed into R/G/B channels
-const NEBULA_BAKED_WIDTH  = 1920; // bake resolution (stretched to fit screen at runtime)
+const NEBULA_BAKED_COUNT = 12; // number of variants to bake
+const NEBULA_LAYER_COUNT = 3; // independent noise layers packed into R/G/B channels
+const NEBULA_BAKED_WIDTH = 1920; // bake resolution (stretched to fit screen at runtime)
 const NEBULA_BAKED_HEIGHT = 1080;
 
-const NEBULA_OCTAVES      = 8;    // number of fBm noise layers — more = finer cloud detail, slower generation
-const NEBULA_SCALE        = 2; // base noise frequency — lower = larger cloud formations, higher = tighter wisps
-const NEBULA_PERSISTENCE  = 0.45; // amplitude falloff per octave (0–1) — lower = smoother/softer clouds
-const NEBULA_LACUNARITY   = 2.0;  // frequency multiplier per octave — 2.0 doubles detail each layer
-const NEBULA_SEED         = 42;   // base RNG seed; each variant offsets by index × 31337, each layer by prime × 7919
-const NEBULA_BLUR_PASSES  = 1;    // box-blur passes after noise sampling — 1 preserves nebula edge sharpness
+const NEBULA_OCTAVES = 8; // number of fBm noise layers — more = finer cloud detail, slower generation
+const NEBULA_SCALE = 2; // base noise frequency — lower = larger cloud formations, higher = tighter wisps
+const NEBULA_PERSISTENCE = 0.45; // amplitude falloff per octave (0–1) — lower = smoother/softer clouds
+const NEBULA_LACUNARITY = 2.0; // frequency multiplier per octave — 2.0 doubles detail each layer
+const NEBULA_SEED = 42; // base RNG seed; each variant offsets by index × 31337, each layer by prime × 7919
+const NEBULA_BLUR_PASSES = 1; // box-blur passes after noise sampling — 1 preserves nebula edge sharpness
 // Domain warp strength — how much a secondary fBm field distorts the primary sample coordinates.
 // Higher = more turbulent twisted filaments (nebula-like); 0 = plain fBm (aurora-like).
 const NEBULA_WARP_STRENGTH = 0.55;
@@ -55,14 +55,16 @@ function buildPerm(seed) {
   };
   for (let i = 255; i > 0; i--) {
     const j = Math.floor(lcg() * (i + 1));
-    const t = p[i]; p[i] = p[j]; p[j] = t;
+    const t = p[i];
+    p[i] = p[j];
+    p[j] = t;
   }
   const perm = new Uint8Array(512);
   for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
   return perm;
 }
 
-const fade = t => t * t * t * (t * (t * 6 - 15) + 10);
+const fade = (t) => t * t * t * (t * (t * 6 - 15) + 10);
 const lerp = (a, b, t) => a + t * (b - a);
 
 function grad(hash, x, y) {
@@ -77,24 +79,27 @@ function perlin2(perm, x, y) {
   const yi = Math.floor(y) & 255;
   const xf = x - Math.floor(x);
   const yf = y - Math.floor(y);
-  const u  = fade(xf);
-  const v  = fade(yf);
-  const aa = perm[perm[xi]     + yi];
-  const ab = perm[perm[xi]     + yi + 1];
+  const u = fade(xf);
+  const v = fade(yf);
+  const aa = perm[perm[xi] + yi];
+  const ab = perm[perm[xi] + yi + 1];
   const ba = perm[perm[xi + 1] + yi];
   const bb = perm[perm[xi + 1] + yi + 1];
   return lerp(
-    lerp(grad(aa, xf,     yf),     grad(ba, xf - 1, yf),     u),
-    lerp(grad(ab, xf,     yf - 1), grad(bb, xf - 1, yf - 1), u),
+    lerp(grad(aa, xf, yf), grad(ba, xf - 1, yf), u),
+    lerp(grad(ab, xf, yf - 1), grad(bb, xf - 1, yf - 1), u),
     v,
   );
 }
 
 function fbm(perm, x, y) {
-  let value = 0, amplitude = 1, frequency = NEBULA_SCALE, maxVal = 0;
+  let value = 0,
+    amplitude = 1,
+    frequency = NEBULA_SCALE,
+    maxVal = 0;
   for (let i = 0; i < NEBULA_OCTAVES; i++) {
-    value    += perlin2(perm, x * frequency, y * frequency) * amplitude;
-    maxVal   += amplitude;
+    value += perlin2(perm, x * frequency, y * frequency) * amplitude;
+    maxVal += amplitude;
     amplitude *= NEBULA_PERSISTENCE;
     frequency *= NEBULA_LACUNARITY;
   }
@@ -118,8 +123,8 @@ function warpedFbm(perm, warpPerm0, warpPerm1, x, y) {
   // Second warp pass — feeds warped coords back in for extra turbulence
   const wx2 = fbm(warpPerm0, x1 + 1.7, y1 + 9.2) - 0.5;
   const wy2 = fbm(warpPerm1, x1 + 8.3, y1 + 2.8) - 0.5;
-  const x2  = x1 + (NEBULA_WARP_STRENGTH * 0.5) * wx2;
-  const y2  = y1 + (NEBULA_WARP_STRENGTH * 0.5) * wy2;
+  const x2 = x1 + NEBULA_WARP_STRENGTH * 0.5 * wx2;
+  const y2 = y1 + NEBULA_WARP_STRENGTH * 0.5 * wy2;
   return fbm(perm, x2, y2);
 }
 
@@ -133,19 +138,28 @@ function boxBlur(src, w, h) {
   const dst = new Uint8Array(src.length);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      let r = 0, g = 0, b = 0, a = 0, count = 0;
+      let r = 0,
+        g = 0,
+        b = 0,
+        a = 0,
+        count = 0;
       for (let ky = -1; ky <= 1; ky++) {
         for (let kx = -1; kx <= 1; kx++) {
           const nx = Math.min(Math.max(x + kx, 0), w - 1);
           const ny = Math.min(Math.max(y + ky, 0), h - 1);
-          const i  = (ny * w + nx) * 4;
-          r += src[i]; g += src[i + 1]; b += src[i + 2]; a += src[i + 3];
+          const i = (ny * w + nx) * 4;
+          r += src[i];
+          g += src[i + 1];
+          b += src[i + 2];
+          a += src[i + 3];
           count++;
         }
       }
       const o = (y * w + x) * 4;
-      dst[o] = r / count; dst[o + 1] = g / count;
-      dst[o + 2] = b / count; dst[o + 3] = a / count;
+      dst[o] = r / count;
+      dst[o + 1] = g / count;
+      dst[o + 2] = b / count;
+      dst[o + 3] = a / count;
     }
   }
   return dst;
@@ -171,21 +185,24 @@ function generatePackedTexture(seedBase, width, height) {
     buildPerm(seedBase + 15838),
   ];
   // Two extra permutation tables used exclusively for domain warp displacement fields
-  const warpPerms = [
-    buildPerm(seedBase + 23757),
-    buildPerm(seedBase + 31676),
-  ];
+  const warpPerms = [buildPerm(seedBase + 23757), buildPerm(seedBase + 31676)];
   let pixels = new Uint8Array(width * height * 4);
 
   for (let y = 0; y < height; y++) {
     const ny = y / height;
     for (let x = 0; x < width; x++) {
       const nx = x / width;
-      const i  = (y * width + x) * 4;
-      pixels[i]     = Math.round(warpedFbm(perms[0], warpPerms[0], warpPerms[1], nx, ny) * 255);  // R = S II / layer 0
-      pixels[i + 1] = Math.round(warpedFbm(perms[1], warpPerms[1], warpPerms[0], nx, ny) * 255);  // G = H-α / layer 1
-      pixels[i + 2] = Math.round(warpedFbm(perms[2], warpPerms[0], warpPerms[1], nx, ny) * 255);  // B = O III / layer 2
-      pixels[i + 3] = 255;                                                                          // A = fully opaque
+      const i = (y * width + x) * 4;
+      pixels[i] = Math.round(
+        warpedFbm(perms[0], warpPerms[0], warpPerms[1], nx, ny) * 255,
+      ); // R = S II / layer 0
+      pixels[i + 1] = Math.round(
+        warpedFbm(perms[1], warpPerms[1], warpPerms[0], nx, ny) * 255,
+      ); // G = H-α / layer 1
+      pixels[i + 2] = Math.round(
+        warpedFbm(perms[2], warpPerms[0], warpPerms[1], nx, ny) * 255,
+      ); // B = O III / layer 2
+      pixels[i + 3] = 255; // A = fully opaque
     }
   }
 
@@ -196,86 +213,52 @@ function generatePackedTexture(seedBase, width, height) {
   return pixels;
 }
 
-// ─── PNG encoder ─────────────────────────────────────────────────────────────
-
-const CRC_TABLE = (() => {
-  const t = new Uint32Array(256);
-  for (let i = 0; i < 256; i++) {
-    let c = i;
-    for (let j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
-    t[i] = c;
-  }
-  return t;
-})();
-
-function crc32(buf) {
-  let crc = 0xFFFFFFFF;
-  for (let i = 0; i < buf.length; i++) {
-    crc = CRC_TABLE[(crc ^ buf[i]) & 0xFF] ^ (crc >>> 8);
-  }
-  return (crc ^ 0xFFFFFFFF) >>> 0;
-}
-
-function makeChunk(type, data) {
-  const typeBuf = Buffer.from(type, 'ascii');
-  const lenBuf  = Buffer.alloc(4);
-  lenBuf.writeUInt32BE(data.length, 0);
-  const crcBuf = Buffer.alloc(4);
-  crcBuf.writeUInt32BE(crc32(Buffer.concat([typeBuf, data])), 0);
-  return Buffer.concat([lenBuf, typeBuf, data, crcBuf]);
-}
-
-function encodePNG(pixels, width, height) {
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(width,  0);
-  ihdr.writeUInt32BE(height, 4);
-  ihdr[8] = 8; ihdr[9] = 6; // 8-bit RGBA
-
-  const stride = width * 4;
-  const raw    = Buffer.alloc(height * (1 + stride));
-  const pixBuf = Buffer.from(pixels.buffer, pixels.byteOffset, pixels.byteLength);
-  for (let y = 0; y < height; y++) {
-    raw[y * (1 + stride)] = 0;
-    pixBuf.copy(raw, y * (1 + stride) + 1, y * stride, (y + 1) * stride);
-  }
-
-  const idat = deflateSync(raw, { level: 6 });
-
-  return Buffer.concat([
-    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), // PNG signature
-    makeChunk('IHDR', ihdr),
-    makeChunk('IDAT', idat),
-    makeChunk('IEND', Buffer.alloc(0)),
-  ]);
-}
+// PNG encoder removed — output is now WebP via sharp (see Phase 3 of optimize-images plan).
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 const outDir = join(__dirname, '..', 'public', 'nebula');
 mkdirSync(outDir, { recursive: true });
 
-// Clean up any old nebula PNGs before generating fresh ones
+// Clean up any old nebula files before generating fresh ones
 for (const f of readdirSync(outDir)) {
-  if (f.endsWith('.png')) rmSync(join(outDir, f));
+  if (f.endsWith('.png') || f.endsWith('.webp')) rmSync(join(outDir, f));
 }
 
 // One packed texture per variant (shared by dark + light; shader selects palette).
-// File naming: {variant}.png  e.g. 0.png, 1.png … 5.png
+// File naming: {variant}.webp  e.g. 0.webp, 1.webp … 11.webp
 const total = NEBULA_BAKED_COUNT;
-let   done  = 0;
+let done = 0;
 
 for (let v = 0; v < NEBULA_BAKED_COUNT; v++) {
   const variantSeed = NEBULA_SEED + v * 31337;
-  const filename    = `${v}.png`;
+  const filename = `${v}.webp`;
 
   process.stdout.write(`[${++done}/${total}] ${filename} ... `);
-  const t0     = Date.now();
-  const pixels = generatePackedTexture(variantSeed, NEBULA_BAKED_WIDTH, NEBULA_BAKED_HEIGHT);
-  const png    = encodePNG(pixels, NEBULA_BAKED_WIDTH, NEBULA_BAKED_HEIGHT);
-  writeFileSync(join(outDir, filename), png);
-  console.log(`done (${Date.now() - t0}ms, ${(png.length / 1024).toFixed(0)} KB)`);
+  const t0 = Date.now();
+  const pixels = generatePackedTexture(
+    variantSeed,
+    NEBULA_BAKED_WIDTH,
+    NEBULA_BAKED_HEIGHT,
+  );
+  // q90 lossless-preferred: fBm values in R/G/B are precision-sensitive for shader palettes;
+  // lossless WebP keeps exact channel values while still beating PNG in size.
+  const webp = await sharp(
+    Buffer.from(pixels.buffer, pixels.byteOffset, pixels.byteLength),
+    {
+      raw: { width: NEBULA_BAKED_WIDTH, height: NEBULA_BAKED_HEIGHT, channels: 4 },
+    },
+  )
+    .webp({ lossless: true })
+    .toBuffer();
+  writeFileSync(join(outDir, filename), webp);
+  console.log(`done (${Date.now() - t0}ms, ${(webp.length / 1024).toFixed(0)} KB)`);
 }
 
 console.log(`\nWrote ${total} packed nebula textures to public/nebula/`);
-console.log(`Each file encodes ${NEBULA_LAYER_COUNT} independent noise layers in R/G/B channels.`);
-console.log(`Colour palettes (SHO dark + pantone light) are applied at runtime by the shader.`);
+console.log(
+  `Each file encodes ${NEBULA_LAYER_COUNT} independent noise layers in R/G/B channels.`,
+);
+console.log(
+  `Colour palettes (SHO dark + pantone light) are applied at runtime by the shader.`,
+);

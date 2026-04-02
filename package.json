@@ -16,6 +16,7 @@
     "test": "vitest run",
     "start": "next start",
     "generate:nebula": "node scripts/generate-nebula.mjs",
+    "optimize:images": "node scripts/optimize-images.mjs",
     "lint": "biome check --write src",
     "format": "biome format --write src"
   },
@@ -53,6 +54,7 @@
     "postcss-preset-mantine": "^1.0.0",
     "postcss-simple-vars": "^7.0.1",
     "sass": "^1.69.5",
+    "sharp": "^0.34.5",
     "typescript": "^5.9.3",
     "vitest": "^4.1.2"
   }

@@ -18,12 +18,12 @@ export const DEG = Math.PI / 180;
  *   - lon=0, lat=0 → (0, 0, 0) on a unit sphere → front at lon≈180° facing +Z
  */
 export function latLonToVec3(lat: number, lon: number, r: number): THREE.Vector3 {
-  const phi   = (90 - lat) * DEG;
+  const phi = (90 - lat) * DEG;
   const theta = (lon + 180) * DEG;
   return new THREE.Vector3(
     -r * Math.sin(phi) * Math.cos(theta),
-     r * Math.cos(phi),
-     r * Math.sin(phi) * Math.sin(theta),
+    r * Math.cos(phi),
+    r * Math.sin(phi) * Math.sin(theta),
   );
 }
 
@@ -54,17 +54,17 @@ export function createEarthMesh(
   initialSunDir: THREE.Vector3 = new THREE.Vector3(1, 0, 0),
   onNightLoaded?: () => void,
 ): EarthMesh {
-  const geo    = new THREE.SphereGeometry(1, 64, 32);
+  const geo = new THREE.SphereGeometry(1, 64, 32);
   const loader = new THREE.TextureLoader();
-  const dayTex = loader.load('/textures/earth.jpg');
+  const dayTex = loader.load('/textures/earth.webp');
 
   const material = new THREE.ShaderMaterial({
     uniforms: {
-      dayTexture:   { value: dayTex },
+      dayTexture: { value: dayTex },
       nightTexture: { value: new THREE.Texture() },
-      sunDir:       { value: initialSunDir.clone() },
+      sunDir: { value: initialSunDir.clone() },
     },
-    vertexShader: /* glsl */`
+    vertexShader: /* glsl */ `
       varying vec2 vUv;
       varying vec3 vWorldNormal;
       void main() {
@@ -73,7 +73,7 @@ export function createEarthMesh(
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
     `,
-    fragmentShader: /* glsl */`
+    fragmentShader: /* glsl */ `
       uniform sampler2D dayTexture;
       uniform sampler2D nightTexture;
       uniform vec3 sunDir;
@@ -96,10 +96,10 @@ export function createEarthMesh(
   });
 
   // Load + downsample night texture to 50% via canvas to save GPU memory
-  loader.load('/textures/earth_night.jpg', (tex) => {
-    const img    = tex.image as HTMLImageElement;
+  loader.load('/textures/earth_night.webp', (tex) => {
+    const img = tex.image as HTMLImageElement;
     const canvas = document.createElement('canvas');
-    canvas.width  = Math.max(1, Math.floor(img.width  * 0.5));
+    canvas.width = Math.max(1, Math.floor(img.width * 0.5));
     canvas.height = Math.max(1, Math.floor(img.height * 0.5));
     const ctx = canvas.getContext('2d');
     if (ctx) {
@@ -136,6 +136,9 @@ export function createAtmosphereMesh(): { mesh: THREE.Mesh; dispose: () => void 
   });
   return {
     mesh: new THREE.Mesh(geo, mat),
-    dispose: () => { geo.dispose(); mat.dispose(); },
+    dispose: () => {
+      geo.dispose();
+      mat.dispose();
+    },
   };
 }

@@ -19,7 +19,7 @@
  * Texture: /textures/moon.jpg  (user must add this file)
  */
 
-import React, { FC, useEffect, useRef } from 'react';
+import { type FC, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
@@ -46,24 +46,28 @@ function buildDebugLines(): THREE.Group {
     const pts: THREE.Vector3[] = [];
     for (let i = 0; i <= 64; i++) {
       const theta = (i / 64) * Math.PI;
-      pts.push(new THREE.Vector3(
-        -Math.cos(phi) * Math.sin(theta) * R,
-        Math.cos(theta) * R,
-        Math.sin(phi) * Math.sin(theta) * R,
-      ));
+      pts.push(
+        new THREE.Vector3(
+          -Math.cos(phi) * Math.sin(theta) * R,
+          Math.cos(theta) * R,
+          Math.sin(phi) * Math.sin(theta) * R,
+        ),
+      );
     }
-    group.add(new THREE.Line(
-      new THREE.BufferGeometry().setFromPoints(pts),
-      new THREE.LineBasicMaterial({ color, transparent: opacity < 1, opacity }),
-    ));
+    group.add(
+      new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(pts),
+        new THREE.LineBasicMaterial({ color, transparent: opacity < 1, opacity }),
+      ),
+    );
   }
 
   // background grid
   for (const lon of [-135, -45, 45, 135]) addMeridian(lon, 0x333333, 0.7);
-  addMeridian(-90, 0xff44aa);  // west limb
-  addMeridian(90,  0xff44aa);  // east limb
-  addMeridian(180, 0xff6600);  // far side
-  addMeridian(0,   0xffff00);  // near side center (faces camera) — draw last so it renders on top
+  addMeridian(-90, 0xff44aa); // west limb
+  addMeridian(90, 0xff44aa); // east limb
+  addMeridian(180, 0xff6600); // far side
+  addMeridian(0, 0xffff00); // near side center (faces camera) — draw last so it renders on top
 
   // equator
   const eqPts: THREE.Vector3[] = [];
@@ -71,10 +75,12 @@ function buildDebugLines(): THREE.Group {
     const phi = (i / 128) * 2 * Math.PI;
     eqPts.push(new THREE.Vector3(-Math.cos(phi) * R, 0, Math.sin(phi) * R));
   }
-  group.add(new THREE.Line(
-    new THREE.BufferGeometry().setFromPoints(eqPts),
-    new THREE.LineBasicMaterial({ color: 0x00aaff }),
-  ));
+  group.add(
+    new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(eqPts),
+      new THREE.LineBasicMaterial({ color: 0x00aaff }),
+    ),
+  );
 
   return group;
 }
@@ -89,9 +95,9 @@ function disposeDebugGroup(group: THREE.Group) {
 }
 
 type Props = {
-  phaseAngle: number;  // degrees, 0–360
-  latitude: number;    // observer latitude; negative = southern hemisphere
-  debug?: boolean;     // draw longitude/equator reference lines
+  phaseAngle: number; // degrees, 0–360
+  latitude: number; // observer latitude; negative = southern hemisphere
+  debug?: boolean; // draw longitude/equator reference lines
 };
 
 export const MoonPhaseWebGL: FC<Props> = ({ phaseAngle, latitude, debug = false }) => {
@@ -158,7 +164,7 @@ export const MoonPhaseWebGL: FC<Props> = ({ phaseAngle, latitude, debug = false 
 
     const loader = new THREE.TextureLoader();
 
-    loader.load('/textures/moon.jpg', (tex) => {
+    loader.load('/textures/moon.webp', (tex) => {
       material.map = tex;
       material.color.set(0xffffff);
       material.needsUpdate = true;
@@ -274,7 +280,14 @@ export const MoonPhaseWebGL: FC<Props> = ({ phaseAngle, latitude, debug = false 
 
   // Update light direction and mesh Z-rotation whenever phase or hemisphere changes
   useEffect(() => {
-    if (!lightRef.current || !meshRef.current || !rendererRef.current || !sceneRef.current || !cameraRef.current) return;
+    if (
+      !lightRef.current ||
+      !meshRef.current ||
+      !rendererRef.current ||
+      !sceneRef.current ||
+      !cameraRef.current
+    )
+      return;
     const rad = phaseAngle * DEG;
     const sign = latitude < 0 ? -1 : 1;
     lightRef.current.position.set(sign * Math.sin(rad), 0, -Math.cos(rad));
@@ -286,7 +299,12 @@ export const MoonPhaseWebGL: FC<Props> = ({ phaseAngle, latitude, debug = false 
   return (
     <div
       ref={wrapperRef}
-      style={{ width: '100%', aspectRatio: '1 / 1', borderRadius: 'var(--mantine-radius-md)', overflow: 'hidden' }}
+      style={{
+        width: '100%',
+        aspectRatio: '1 / 1',
+        borderRadius: 'var(--mantine-radius-md)',
+        overflow: 'hidden',
+      }}
     >
       <div
         ref={mountRef}

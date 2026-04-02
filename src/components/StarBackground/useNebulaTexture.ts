@@ -52,7 +52,7 @@ export function useNebulaTexture(enabled: boolean): NebulaState {
     }
     const v = window.__nebulaVariant;
 
-    fetch(`/nebula/${v}.png`)
+    fetch(`/nebula/${v}.webp`)
       .then((r) => r.blob())
       .then((b) => createImageBitmap(b))
       .then((bmp) => {
