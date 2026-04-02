@@ -11,7 +11,7 @@
 }
 
 .credit {
-  position: absolute;
+  position: fixed;
   bottom: 30px;
   right: 10px;
   margin: 0;
@@ -22,4 +22,8 @@
   color: rgba(255, 255, 255, 0.7);
   pointer-events: none;
   user-select: none;
+
+  @media (max-width: 48em) {
+    display: none;
+  }
 }

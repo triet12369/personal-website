@@ -207,6 +207,8 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({
           heroUvScale: gl.getUniformLocation(nebulaProg, 'u_hero_uv_scale')!,
           heroScreenMin: gl.getUniformLocation(nebulaProg, 'u_hero_screen_min')!,
           heroScreenMax: gl.getUniformLocation(nebulaProg, 'u_hero_screen_max')!,
+          heroFadeX: gl.getUniformLocation(nebulaProg, 'u_hero_fade_x')!,
+          heroFadeY: gl.getUniformLocation(nebulaProg, 'u_hero_fade_y')!,
         }
       : null;
 
@@ -604,6 +606,8 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({
               gl.uniform2f(nLoc.heroUvScale, hUvScaleX, hUvScaleY);
               gl.uniform2f(nLoc.heroScreenMin, hScrMinX, hScrMinY);
               gl.uniform2f(nLoc.heroScreenMax, hScrMaxX, hScrMaxY);
+              gl.uniform1f(nLoc.heroFadeX, hero.edgeFadeX ?? 0);
+              gl.uniform1f(nLoc.heroFadeY, hero.edgeFadeY ?? 0);
               gl.activeTexture(gl.TEXTURE0);
             }
 

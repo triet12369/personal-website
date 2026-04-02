@@ -99,6 +99,11 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({
     let nebulaComposed: HTMLCanvasElement | null = null;
     let nebulaComposedKind: string | null = null;
 
+    // Offscreen canvas holding the hero photo with edge fades pre-baked.
+    // Recomputed when the bitmap, canvas size, or any relevant config changes.
+    let heroComposed: HTMLCanvasElement | null = null;
+    let heroComposedKey: string | null = null;
+
     function resize() {
       w = el.offsetWidth;
       h = el.offsetHeight;
@@ -388,52 +393,7 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({
         const hero = heroRef.current.heroNebula;
         const hBmp = heroRef.current.heroBitmap;
 
-        // ── Hero astrophoto base layer ──────────────────────────────────
-        if (hero && hBmp) {
-          const hImgAR = hBmp.width / hBmp.height;
-          const hCanAR = w / h;
-          const fit = hero.fit ?? 'cover';
-          c.globalAlpha = hero.photoOpacity ?? 0.75;
-
-          if (fit === 'fill') {
-            // Stretch to fill — no aspect ratio preservation
-            c.drawImage(hBmp, 0, 0, hBmp.width, hBmp.height, 0, 0, w, h);
-          } else if (fit === 'contain') {
-            // Scale to fit entirely — letterbox/pillarbox with transparent gaps
-            let dw: number, dh: number, dx: number, dy: number;
-            if (hCanAR >= hImgAR) {
-              dh = h;
-              dw = h * hImgAR;
-              dy = 0;
-              dx = (w - dw) / 2;
-            } else {
-              dw = w;
-              dh = w / hImgAR;
-              dx = 0;
-              dy = (h - dh) / 2;
-            }
-            c.drawImage(hBmp, 0, 0, hBmp.width, hBmp.height, dx, dy, dw, dh);
-          } else {
-            // cover (default) — scale to fill, crop the overflow
-            let hSx: number, hSy: number, hSw: number, hSh: number;
-            if (hCanAR >= hImgAR) {
-              hSw = hBmp.width;
-              hSh = hBmp.width / hCanAR;
-              hSx = 0;
-              hSy = (hBmp.height - hSh) / 2;
-            } else {
-              hSh = hBmp.height;
-              hSw = hBmp.height * hCanAR;
-              hSy = 0;
-              hSx = (hBmp.width - hSw) / 2;
-            }
-            c.drawImage(hBmp, hSx, hSy, hSw, hSh, 0, 0, w, h);
-          }
-
-          c.globalAlpha = 1;
-        }
-
-        // ── Procedural nebula (screen-blended over hero, normal mode without) ─
+        // ── Ensure nebulaComposed is ready first (needed for edge-fill pass) ─
         const bitmap = nebulaRef.current.nebula;
         if (bitmap) {
           const kind = isDark ? `dark-${nebulaPaletteRef.current}` : 'light';
@@ -450,38 +410,149 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({
             );
             nebulaComposedKind = kind;
           }
-          const baseOpacity = isDark ? NEBULA_OPACITY : NEBULA_OPACITY_LIGHT;
-          const procOpacity = hero
-            ? (hero.proceduralBlend ?? 0.35) * baseOpacity
-            : baseOpacity;
-          if (hero && hBmp) {
-            // Map 'normal' to Canvas 2D's 'source-over' (CSS uses 'normal', Canvas uses 'source-over')
-            const blendMode = (
-              hero.proceduralBlendMode === 'normal'
-                ? 'source-over'
-                : (hero.proceduralBlendMode ?? 'screen')
-            ) as GlobalCompositeOperation;
-            c.globalCompositeOperation = blendMode;
-          }
-          c.globalAlpha = procOpacity;
-          // Cover-crop: preserve texture aspect ratio, center-crop the overflow.
+        }
+
+        // Shared crop for all nebula draw calls.
+        const baseOpacity = isDark ? NEBULA_OPACITY : NEBULA_OPACITY_LIGHT;
+        let nSx = 0,
+          nSy = 0,
+          nSw = 1,
+          nSh = 1;
+        if (nebulaComposed) {
           const texW = nebulaComposed.width;
           const texH = nebulaComposed.height;
           const canvasAR = w / h;
           const textureAR = texW / texH;
-          let sx: number, sy: number, sw: number, sh: number;
           if (canvasAR >= textureAR) {
-            sw = texW;
-            sh = texW / canvasAR;
-            sx = 0;
-            sy = (texH - sh) / 2;
+            nSw = texW;
+            nSh = texW / canvasAR;
+            nSx = 0;
+            nSy = (texH - nSh) / 2;
           } else {
-            sh = texH;
-            sw = texH * canvasAR;
-            sy = 0;
-            sx = (texW - sw) / 2;
+            nSh = texH;
+            nSw = texH * canvasAR;
+            nSy = 0;
+            nSx = (texW - nSw) / 2;
           }
-          c.drawImage(nebulaComposed, sx, sy, sw, sh, 0, 0, w, h);
+        }
+
+        // ── Pass 1: procedural nebula as base layer (full opacity) ──────────
+        // Without a hero photo this is the only draw (same as before).
+        // With a hero photo this ensures the faded edges dissolve into
+        // full-strength nebula rather than the reduced proc-blend opacity.
+        if (nebulaComposed) {
+          c.globalAlpha = baseOpacity;
+          c.globalCompositeOperation = 'source-over';
+          c.drawImage(nebulaComposed, nSx, nSy, nSw, nSh, 0, 0, w, h);
+          c.globalAlpha = 1;
+          c.globalCompositeOperation = 'source-over';
+        }
+
+        // ── Pass 2: hero astrophoto on top (transparent fade → nebula shows) ─
+        if (hero && hBmp) {
+          const hImgAR = hBmp.width / hBmp.height;
+          const hCanAR = w / h;
+          const fit = hero.fit ?? 'cover';
+          const fadeX = hero.edgeFadeX ?? 0;
+          const fadeY = hero.edgeFadeY ?? 0;
+
+          const hKey = `${hBmp.width}x${hBmp.height}:${w}x${h}:${fit}:${hero.photoOpacity ?? 0.75}:${fadeX}:${fadeY}`;
+          if (heroComposedKey !== hKey || !heroComposed) {
+            const off = document.createElement('canvas');
+            off.width = w;
+            off.height = h;
+            const oc = off.getContext('2d')!;
+            oc.globalAlpha = hero.photoOpacity ?? 0.75;
+
+            if (fit === 'fill') {
+              oc.drawImage(hBmp, 0, 0, hBmp.width, hBmp.height, 0, 0, w, h);
+            } else if (fit === 'contain') {
+              let dw: number, dh: number, dx: number, dy: number;
+              if (hCanAR >= hImgAR) {
+                dh = h;
+                dw = h * hImgAR;
+                dy = 0;
+                dx = (w - dw) / 2;
+              } else {
+                dw = w;
+                dh = w / hImgAR;
+                dx = 0;
+                dy = (h - dh) / 2;
+              }
+              oc.drawImage(hBmp, 0, 0, hBmp.width, hBmp.height, dx, dy, dw, dh);
+            } else {
+              // cover (default)
+              let hSx: number, hSy: number, hSw: number, hSh: number;
+              if (hCanAR >= hImgAR) {
+                hSw = hBmp.width;
+                hSh = hBmp.width / hCanAR;
+                hSx = 0;
+                hSy = (hBmp.height - hSh) / 2;
+              } else {
+                hSh = hBmp.height;
+                hSw = hBmp.height * hCanAR;
+                hSy = 0;
+                hSx = (hBmp.width - hSw) / 2;
+              }
+              oc.drawImage(hBmp, hSx, hSy, hSw, hSh, 0, 0, w, h);
+            }
+
+            oc.globalAlpha = 1;
+
+            // Per-edge fade: destination-in gradients carve transparent regions.
+            if (fadeX > 0 || fadeY > 0) {
+              oc.globalCompositeOperation = 'destination-in';
+              if (fadeY > 0) {
+                const fadeH = fadeY * h;
+                const gTop = oc.createLinearGradient(0, 0, 0, fadeH);
+                gTop.addColorStop(0, 'rgba(0,0,0,0)');
+                gTop.addColorStop(1, 'rgba(0,0,0,1)');
+                oc.fillStyle = gTop;
+                oc.fillRect(0, 0, w, fadeH);
+                const gBot = oc.createLinearGradient(0, h - fadeH, 0, h);
+                gBot.addColorStop(0, 'rgba(0,0,0,1)');
+                gBot.addColorStop(1, 'rgba(0,0,0,0)');
+                oc.fillStyle = gBot;
+                oc.fillRect(0, h - fadeH, w, fadeH);
+              }
+              if (fadeX > 0) {
+                const fadeW = fadeX * w;
+                const gLeft = oc.createLinearGradient(0, 0, fadeW, 0);
+                gLeft.addColorStop(0, 'rgba(0,0,0,0)');
+                gLeft.addColorStop(1, 'rgba(0,0,0,1)');
+                oc.fillStyle = gLeft;
+                oc.fillRect(0, 0, fadeW, h);
+                const gRight = oc.createLinearGradient(w - fadeW, 0, w, 0);
+                gRight.addColorStop(0, 'rgba(0,0,0,1)');
+                gRight.addColorStop(1, 'rgba(0,0,0,0)');
+                oc.fillStyle = gRight;
+                oc.fillRect(w - fadeW, 0, fadeW, h);
+              }
+              oc.globalCompositeOperation = 'source-over';
+            }
+
+            heroComposed = off;
+            heroComposedKey = hKey;
+          }
+
+          c.drawImage(heroComposed, 0, 0);
+        }
+
+        // ── Pass 3: proc nebula screen-glow over hero center ─────────────────
+        // Only when a hero is present — adds the configured glow blend on top of
+        // the photo.  At the faded edges the hero is transparent so the base
+        // nebula from pass 1 already shows at full strength; this pass just
+        // brightens the center.
+        if (hero && hBmp && nebulaComposed) {
+          const procOpacity = (hero.proceduralBlend ?? 0.35) * baseOpacity;
+          const blendMode = (
+            hero.proceduralBlendMode === 'normal'
+              ? 'source-over'
+              : (hero.proceduralBlendMode ?? 'screen')
+          ) as GlobalCompositeOperation;
+          c.globalAlpha = procOpacity;
+          c.globalCompositeOperation = blendMode;
+          c.drawImage(nebulaComposed, nSx, nSy, nSw, nSh, 0, 0, w, h);
           c.globalAlpha = 1;
           c.globalCompositeOperation = 'source-over';
         }

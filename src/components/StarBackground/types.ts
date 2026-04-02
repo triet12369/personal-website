@@ -91,6 +91,18 @@ export interface HeroNebulaConfig {
    *   'fill'              — stretches to exactly fill. Aspect ratio is not preserved.
    */
   fit?: 'cover' | 'contain' | 'fill';
+  /**
+   * Fraction of the canvas width (0–0.5) over which the left and right edges of the
+   * photo fade to transparent, blending naturally into the star background.
+   * 0 = hard edge (default). 0.15 is a gentle fade; 0.3 is dramatic.
+   */
+  edgeFadeX?: number;
+  /**
+   * Fraction of the canvas height (0–0.5) over which the top and bottom edges of the
+   * photo fade to transparent, blending naturally into the star background.
+   * 0 = hard edge (default). 0.15 is a gentle fade; 0.3 is dramatic.
+   */
+  edgeFadeY?: number;
 }
 
 /**

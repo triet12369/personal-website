@@ -30,6 +30,10 @@ uniform vec2      u_hero_uv_scale;   // image UV scale   (cover: crop rect;   co
 // 'cover'/'fill' → (0,0)–(1,1).  'contain' → the letterbox subrect.
 uniform vec2      u_hero_screen_min; // bottom-left of the image rect in screen UV space
 uniform vec2      u_hero_screen_max; // top-right  of the image rect in screen UV space
+// Edge vignette: fraction of the image rect (0–0.5) over which each axis fades to transparent.
+// 0 = hard edge (off).
+uniform float     u_hero_fade_x;    // left/right edge fade (fraction of rect width)
+uniform float     u_hero_fade_y;    // top/bottom edge fade (fraction of rect height)
 varying vec2      v_uv;
 varying vec2      v_screen_uv;
 
@@ -217,19 +221,32 @@ void main() {
     // For cover/fill: screen rect = (0,0)-(1,1) so t == screenUV.
     // For contain:    t remaps the subrect to [0,1] image space.
     vec2 t = (screenUV - u_hero_screen_min) / (u_hero_screen_max - u_hero_screen_min);
+
+    // Edge vignette: smoothstep fade near the rect boundary so the photo blends
+    // transparently into the star background rather than having a hard cutoff.
+    float fadeX = (u_hero_fade_x > 0.001)
+      ? smoothstep(0.0, u_hero_fade_x, t.x) * smoothstep(0.0, u_hero_fade_x, 1.0 - t.x)
+      : 1.0;
+    float fadeY = (u_hero_fade_y > 0.001)
+      ? smoothstep(0.0, u_hero_fade_y, t.y) * smoothstep(0.0, u_hero_fade_y, 1.0 - t.y)
+      : 1.0;
+    float edgeFade = fadeX * fadeY;
+
     vec2 heroUV   = u_hero_uv_offset + t * u_hero_uv_scale;
     vec4  heroSmp  = texture2D(u_hero_tex, heroUV);
     vec3  heroBase = heroSmp.rgb * u_hero_opacity;
 
-    // Scale the procedural contribution down by the blend amount, then
-    // screen-blend it over the photo (1 − (1−A)(1−B) brightens both layers).
+    // Screen-blend the procedural nebula on top of the photo at the blend amount.
     vec3  procScaled = rgb * u_hero_proc_blend;
-    vec3  finalRGB   = 1.0 - (1.0 - heroBase) * (1.0 - procScaled);
+    vec3  heroFinalRGB = 1.0 - (1.0 - heroBase) * (1.0 - procScaled);
+    float heroFinalA   = max(u_hero_opacity, a * u_hero_proc_blend);
 
-    // Quad is always at least photoOpacity opaque so the photo is never hidden.
-    float finalA = max(u_hero_opacity, a * u_hero_proc_blend);
-
-    gl_FragColor = vec4(finalRGB * finalA, finalA);
+    // Mix between the plain procedural-nebula output (edgeFade=0) and the full
+    // hero+proc output (edgeFade=1).  This ensures the faded edges show the
+    // nebula at its natural full opacity rather than the reduced proc-blend.
+    vec4 plainOut = vec4(rgb * a, a);
+    vec4 heroOut  = vec4(heroFinalRGB * heroFinalA, heroFinalA);
+    gl_FragColor  = mix(plainOut, heroOut, edgeFade);
     return;
   }
 
