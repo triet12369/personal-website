@@ -1,30 +1,57 @@
 import { useComputedColorScheme } from '@mantine/core';
-import React, { useEffect, useRef } from 'react';
+import type React from 'react';
+import { useEffect, useRef } from 'react';
 
 import styles from './StarBackground.module.scss';
 import {
-  STAR_DENSITY, STAR_COUNT_MAX, STAR_GLOW_FACTOR, STAR_CANVAS_GLOW_SCALE, STAR_BLOOM_FACTOR, STAR_BLOOM_STRENGTH,
-  STAR_TWINKLE_AMPLITUDE, STAR_TWINKLE_CHANCE, STAR_TWINKLE_BURST_CYCLES,
-  SHOOT_MAX_COUNT, SHOOT_SPAWN_INTERVAL, SHOOT_SPAWN_CHANCE,
-  SHOOT_FADE_IN, SHOOT_FADE_OUT, SHOOT_GLOW_RADIUS, SHOOT_LINE_WIDTH,
-  EXPLOSION_RING_EXPAND, EXPLOSION_RING_FADE,
-  EXPLOSION_PARTICLE_DRAG, EXPLOSION_PARTICLE_GRAVITY,
+  STAR_DENSITY,
+  STAR_COUNT_MAX,
+  STAR_GLOW_FACTOR,
+  STAR_CANVAS_GLOW_SCALE,
+  STAR_BLOOM_FACTOR,
+  STAR_BLOOM_STRENGTH,
+  STAR_TWINKLE_AMPLITUDE,
+  STAR_TWINKLE_CHANCE,
+  STAR_TWINKLE_BURST_CYCLES,
+  SHOOT_MAX_COUNT,
+  SHOOT_SPAWN_INTERVAL,
+  SHOOT_SPAWN_CHANCE,
+  SHOOT_FADE_IN,
+  SHOOT_FADE_OUT,
+  SHOOT_GLOW_RADIUS,
+  SHOOT_LINE_WIDTH,
+  EXPLOSION_RING_EXPAND,
+  EXPLOSION_RING_FADE,
+  EXPLOSION_PARTICLE_DRAG,
+  EXPLOSION_PARTICLE_GRAVITY,
   DEBUG_FRAMETIME,
-  NEBULA_ENABLED, NEBULA_OPACITY, NEBULA_OPACITY_LIGHT,
-  NEBULA_WEIGHT_HYDROGEN, NEBULA_WEIGHT_SO_HI, NEBULA_WEIGHT_SO_LO,
-  NEBULA_STAR_ILLUM_RADIUS, NEBULA_STAR_ILLUM_STRENGTH, NEBULA_ILLUM_BOOST,
+  NEBULA_ENABLED,
+  NEBULA_OPACITY,
+  NEBULA_OPACITY_LIGHT,
+  NEBULA_WEIGHT_HYDROGEN,
+  NEBULA_WEIGHT_SO_HI,
+  NEBULA_WEIGHT_SO_LO,
+  NEBULA_STAR_ILLUM_RADIUS,
+  NEBULA_STAR_ILLUM_STRENGTH,
+  NEBULA_ILLUM_BOOST,
 } from './config';
 import { DARK_PALETTE, LIGHT_PALETTE } from './palettes';
-import { makeStars, spawnExplosion, spawnShootingStar, drawFrameHUD, HUD_SAMPLES } from './helpers';
+import {
+  makeStars,
+  spawnExplosion,
+  spawnShootingStar,
+  drawFrameHUD,
+  HUD_SAMPLES,
+} from './helpers';
 import type { NebulaProps, Palette, Star, ShootingStar, Explosion } from './types';
 
 export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rafRef    = useRef<number>(0);
-  const colorScheme    = useComputedColorScheme('dark', { getInitialValueInEffect: true });
-  const paletteRef     = useRef<Palette>(DARK_PALETTE);
+  const rafRef = useRef<number>(0);
+  const colorScheme = useComputedColorScheme('dark', { getInitialValueInEffect: true });
+  const paletteRef = useRef<Palette>(DARK_PALETTE);
   const colorSchemeRef = useRef(colorScheme);
-  const nebulaRef      = useRef<NebulaProps>({ nebula });
+  const nebulaRef = useRef<NebulaProps>({ nebula });
 
   // Keep nebula bitmaps accessible inside the RAF loop without restarting it
   useEffect(() => {
@@ -33,7 +60,7 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
 
   // Swap palette immediately without restarting the animation loop
   useEffect(() => {
-    paletteRef.current     = colorScheme === 'dark' ? DARK_PALETTE : LIGHT_PALETTE;
+    paletteRef.current = colorScheme === 'dark' ? DARK_PALETTE : LIGHT_PALETTE;
     colorSchemeRef.current = colorScheme;
   }, [colorScheme]);
 
@@ -265,7 +292,7 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
     let hudFilled = false;
     let lastWall = performance.now();
 
-    function draw(now: DOMHighResTimeStamp) {
+    function draw(_now: DOMHighResTimeStamp) {
       // Measure only the work inside draw(), not the vsync wait before it.
       // This gives a true CPU cost that is comparable across renderers regardless
       // of monitor refresh rate.
@@ -506,7 +533,7 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
             exp.particles.splice(j, 1);
             continue;
           }
-          const drag = Math.pow(EXPLOSION_PARTICLE_DRAG, dt);
+          const drag = EXPLOSION_PARTICLE_DRAG ** dt;
           p.vx *= drag;
           p.vy *= drag;
           p.vy += EXPLOSION_PARTICLE_GRAVITY * dt;

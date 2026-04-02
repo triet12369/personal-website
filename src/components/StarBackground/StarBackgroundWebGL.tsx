@@ -1,34 +1,64 @@
 import { useComputedColorScheme } from '@mantine/core';
-import React, { useEffect, useRef } from 'react';
+import type React from 'react';
+import { useEffect, useRef } from 'react';
 
 import styles from './StarBackground.module.scss';
 import {
-  STAR_DENSITY, STAR_COUNT_MAX, STAR_GLOW_FACTOR, STAR_BLOOM_FACTOR, STAR_BLOOM_STRENGTH,
-  STAR_TWINKLE_AMPLITUDE, STAR_TWINKLE_CHANCE, STAR_TWINKLE_BURST_CYCLES,
-  SHOOT_MAX_COUNT, SHOOT_SPAWN_INTERVAL, SHOOT_SPAWN_CHANCE,
-  SHOOT_FADE_IN, SHOOT_FADE_OUT, SHOOT_GLOW_RADIUS, SHOOT_LINE_WIDTH,
+  STAR_DENSITY,
+  STAR_COUNT_MAX,
+  STAR_GLOW_FACTOR,
+  STAR_BLOOM_FACTOR,
+  STAR_BLOOM_STRENGTH,
+  STAR_TWINKLE_AMPLITUDE,
+  STAR_TWINKLE_CHANCE,
+  STAR_TWINKLE_BURST_CYCLES,
+  SHOOT_MAX_COUNT,
+  SHOOT_SPAWN_INTERVAL,
+  SHOOT_SPAWN_CHANCE,
+  SHOOT_FADE_IN,
+  SHOOT_FADE_OUT,
+  SHOOT_GLOW_RADIUS,
+  SHOOT_LINE_WIDTH,
   EXPLOSION_PARTICLE_COUNT,
-  EXPLOSION_RING_EXPAND, EXPLOSION_RING_FADE,
-  EXPLOSION_PARTICLE_DRAG, EXPLOSION_PARTICLE_GRAVITY,
+  EXPLOSION_RING_EXPAND,
+  EXPLOSION_RING_FADE,
+  EXPLOSION_PARTICLE_DRAG,
+  EXPLOSION_PARTICLE_GRAVITY,
   DEBUG_FRAMETIME,
-  NEBULA_ENABLED, NEBULA_OPACITY, NEBULA_OPACITY_LIGHT,
-  NEBULA_WEIGHT_HYDROGEN, NEBULA_WEIGHT_SO_HI, NEBULA_WEIGHT_SO_LO,
-  NEBULA_STAR_ILLUM_RADIUS, NEBULA_STAR_ILLUM_STRENGTH, NEBULA_ILLUM_BOOST,
+  NEBULA_ENABLED,
+  NEBULA_OPACITY,
+  NEBULA_OPACITY_LIGHT,
+  NEBULA_WEIGHT_HYDROGEN,
+  NEBULA_WEIGHT_SO_HI,
+  NEBULA_WEIGHT_SO_LO,
+  NEBULA_STAR_ILLUM_RADIUS,
+  NEBULA_STAR_ILLUM_STRENGTH,
+  NEBULA_ILLUM_BOOST,
 } from './config';
 import { DARK_RGB_PALETTE, LIGHT_RGB_PALETTE } from './palettes';
-import { makeStars, spawnExplosion, spawnShootingStar, drawFrameHUD, HUD_SAMPLES } from './helpers';
+import {
+  makeStars,
+  spawnExplosion,
+  spawnShootingStar,
+  drawFrameHUD,
+  HUD_SAMPLES,
+} from './helpers';
 import type { NebulaProps, RGBPalette, Star, ShootingStar, Explosion } from './types';
-import POINT_VERT  from './shaders/point.vert';
-import POINT_FRAG  from './shaders/point.frag';
-import BLOOM_FRAG  from './shaders/bloom.frag';
-import GEOM_VERT   from './shaders/geom.vert';
-import GEOM_FRAG   from './shaders/geom.frag';
+import POINT_VERT from './shaders/point.vert';
+import POINT_FRAG from './shaders/point.frag';
+import BLOOM_FRAG from './shaders/bloom.frag';
+import GEOM_VERT from './shaders/geom.vert';
+import GEOM_FRAG from './shaders/geom.frag';
 import NEBULA_VERT from './shaders/nebula.vert';
 import NEBULA_FRAG from './shaders/nebula.frag';
 
 // ─── GL helpers ───────────────────────────────────────────────────────────────
 
-function compileShader(gl: WebGLRenderingContext, type: number, src: string): WebGLShader {
+function compileShader(
+  gl: WebGLRenderingContext,
+  type: number,
+  src: string,
+): WebGLShader {
   const shader = gl.createShader(type)!;
   gl.shaderSource(shader, src);
   gl.compileShader(shader);
@@ -38,9 +68,13 @@ function compileShader(gl: WebGLRenderingContext, type: number, src: string): We
   return shader;
 }
 
-function createProgram(gl: WebGLRenderingContext, vert: string, frag: string): WebGLProgram {
+function createProgram(
+  gl: WebGLRenderingContext,
+  vert: string,
+  frag: string,
+): WebGLProgram {
   const prog = gl.createProgram()!;
-  gl.attachShader(prog, compileShader(gl, gl.VERTEX_SHADER,   vert));
+  gl.attachShader(prog, compileShader(gl, gl.VERTEX_SHADER, vert));
   gl.attachShader(prog, compileShader(gl, gl.FRAGMENT_SHADER, frag));
   gl.linkProgram(prog);
   if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
@@ -56,11 +90,11 @@ const RING_SEGS = 64;
 const RING_VERT_COUNT = 2 * (RING_SEGS + 1);
 
 export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
-  const canvasRef      = useRef<HTMLCanvasElement>(null);
-  const overlayRef     = useRef<HTMLCanvasElement>(null);
-  const rafRef         = useRef<number>(0);
-  const colorScheme    = useComputedColorScheme('dark', { getInitialValueInEffect: true });
-  const paletteRef     = useRef<RGBPalette>(DARK_RGB_PALETTE);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const overlayRef = useRef<HTMLCanvasElement>(null);
+  const rafRef = useRef<number>(0);
+  const colorScheme = useComputedColorScheme('dark', { getInitialValueInEffect: true });
+  const paletteRef = useRef<RGBPalette>(DARK_RGB_PALETTE);
   const colorSchemeRef = useRef(colorScheme);
 
   // Keep nebula bitmaps accessible inside the RAF loop without restarting it
@@ -71,7 +105,7 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
 
   // Swap palette immediately without restarting the animation loop
   useEffect(() => {
-    paletteRef.current     = colorScheme === 'dark' ? DARK_RGB_PALETTE : LIGHT_RGB_PALETTE;
+    paletteRef.current = colorScheme === 'dark' ? DARK_RGB_PALETTE : LIGHT_RGB_PALETTE;
     colorSchemeRef.current = colorScheme;
   }, [colorScheme]);
 
@@ -644,7 +678,7 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
             exp.particles.splice(j, 1);
             continue;
           }
-          const drag = Math.pow(EXPLOSION_PARTICLE_DRAG, dt);
+          const drag = EXPLOSION_PARTICLE_DRAG ** dt;
           p.vx *= drag;
           p.vy *= drag;
           p.vy += EXPLOSION_PARTICLE_GRAVITY * dt;

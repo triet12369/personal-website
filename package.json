@@ -16,7 +16,8 @@
     "test": "vitest run",
     "start": "next start",
     "generate:nebula": "node scripts/generate-nebula.mjs",
-    "lint": "eslint --fix 'src/**/*.{ts,tsx}'"
+    "lint": "biome check --write src",
+    "format": "biome format --write src"
   },
   "dependencies": {
     "@mantine/core": "8.3.18",
@@ -42,30 +43,16 @@
     "zustand": "^4.3.2"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.10",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20.0.0",
     "@types/react": "18.0.15",
     "@types/react-dom": "18.0.6",
-    "@typescript-eslint/eslint-plugin": "^8.57.2",
-    "@typescript-eslint/parser": "^8.57.2",
+    "@biomejs/biome": "^2.4.10",
     "concurrently": "^9.2.1",
-    "eslint": "^9.0.0",
-    "eslint-config-next": "^16.2.1",
-    "eslint-config-prettier": "^9.0.0",
-    "eslint-import-resolver-typescript": "^3.5.3",
-    "eslint-plugin-cypress": "^4.0.0",
-    "eslint-plugin-import": "^2.27.5",
-    "eslint-plugin-jest-dom": "^5.0.0",
-    "eslint-plugin-jsx-a11y": "^6.7.1",
-    "eslint-plugin-prettier": "^5.0.0",
-    "eslint-plugin-react": "^7.32.1",
-    "eslint-plugin-react-hooks": "^5.0.0",
-    "eslint-plugin-storybook": "^0.11.0",
-    "eslint-plugin-testing-library": "^7.0.0",
     "postcss": "^8.4.31",
     "postcss-preset-mantine": "^1.0.0",
     "postcss-simple-vars": "^7.0.1",
-    "prettier": "^3.0.0",
     "sass": "^1.69.5",
     "typescript": "^5.9.3",
     "vitest": "^4.1.2"
