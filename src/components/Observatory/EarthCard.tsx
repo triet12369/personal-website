@@ -9,7 +9,7 @@ import {
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import dynamic from 'next/dynamic';
-import React, { FC, useEffect, useRef, useState } from 'react';
+import { type FC, useEffect, useRef, useState } from 'react';
 
 const BlueMarbleWebGL = dynamic(
   () => import('./BlueMarbleWebGL').then((m) => m.BlueMarbleWebGL),
@@ -21,8 +21,8 @@ import {
   getSatelliteImage,
   getSatelliteImageBySat,
   locationHasConusImage,
-  SatelliteEarthData,
-  SatKey,
+  type SatelliteEarthData,
+  type SatKey,
 } from '../../lib/satelliteEarth';
 import {
   geoToGibsTile,
@@ -67,8 +67,8 @@ function SatTile({ satKey, label }: { satKey: SatKey; label: string }) {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
-        timeZone: 'UTC',
-      }) + ' UTC'
+        timeZoneName: 'short',
+      })
     : null;
 
   return (
@@ -162,9 +162,7 @@ function ZoomedEarthView({
       // Build tile URL from the full-disk URL timestamp
       // Full-disk: https://himawari8.nict.go.jp/img/D531106/1d/550/{YYYY}/{MM}/{DD}/{HHMMSS}_0_0.png
       const m = data.imageUrl.match(
-        new RegExp(
-          '^(https://himawari8\.nict\.go\.jp/img/D531106/)1d/550/(.+/\\d{6})_0_0\.png$',
-        ),
+        /^(https:\/\/himawari8.nict.go.jp\/img\/D531106\/)1d\/550\/(.+\/\d{6})_0_0.png$/,
       );
       if (m) {
         const tileUrl = `${m[1]}4d/550/${m[2]}_${col}_${row}.png`;
@@ -302,7 +300,17 @@ function ZoomedEarthView({
  * textured with NASA GIBS Blue Marble, rotated so the location faces the
  * camera.
  */
-function StaticLocationView({ lat, lon, sunLat, sunLon }: { lat: number; lon: number; sunLat: number; sunLon: number }) {
+function StaticLocationView({
+  lat,
+  lon,
+  sunLat,
+  sunLon,
+}: {
+  lat: number;
+  lon: number;
+  sunLat: number;
+  sunLon: number;
+}) {
   const t = useT();
   return (
     <div style={{ position: 'relative' }}>
@@ -556,8 +564,8 @@ export const EarthCard: FC<Props> = ({ location, date }) => {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
-        timeZone: 'UTC',
-      }) + ' UTC'
+        timeZoneName: 'short',
+      })
     : null;
 
   return (
@@ -727,17 +735,22 @@ export const EarthCard: FC<Props> = ({ location, date }) => {
               }}
             >
               <Text size="xs" c="dimmed">
-                {geoToImageFraction(location.lat, location.lon, data.satellite) === null ? (
+                {geoToImageFraction(location.lat, location.lon, data.satellite) ===
+                null ? (
                   t('observatory.earthSimulated')
                 ) : (
-                  <>{t('observatory.earthSatellite')}: <strong>{data.satellite}</strong></>
+                  <>
+                    {t('observatory.earthSatellite')}: <strong>{data.satellite}</strong>
+                  </>
                 )}
               </Text>
-              {formattedTime && geoToImageFraction(location.lat, location.lon, data.satellite) !== null && (
-                <Text size="xs" c="dimmed">
-                  {formattedTime}
-                </Text>
-              )}
+              {formattedTime &&
+                geoToImageFraction(location.lat, location.lon, data.satellite) !==
+                  null && (
+                  <Text size="xs" c="dimmed">
+                    {formattedTime}
+                  </Text>
+                )}
             </div>
 
             <div
