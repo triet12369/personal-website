@@ -31,6 +31,9 @@ import {
   NEBULA_WEIGHT_HYDROGEN,
   NEBULA_WEIGHT_SO_HI,
   NEBULA_WEIGHT_SO_LO,
+  NEBULA_WEIGHT_RGB_HI,
+  NEBULA_WEIGHT_RGB_MID,
+  NEBULA_WEIGHT_RGB_LO,
   NEBULA_STAR_ILLUM_RADIUS,
   NEBULA_STAR_ILLUM_STRENGTH,
   NEBULA_ILLUM_BOOST,
@@ -89,19 +92,21 @@ const RING_SEGS = 64;
 // Preallocate ring buffer: 2 * (RING_SEGS + 1) vertices × 6 floats
 const RING_VERT_COUNT = 2 * (RING_SEGS + 1);
 
-export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
+export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula, nebulaPalette }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
   const colorScheme = useComputedColorScheme('dark', { getInitialValueInEffect: true });
   const paletteRef = useRef<RGBPalette>(DARK_RGB_PALETTE);
   const colorSchemeRef = useRef(colorScheme);
+  const nebulaPaletteRef = useRef(nebulaPalette);
 
   // Keep nebula bitmaps accessible inside the RAF loop without restarting it
-  const nebulaRef = useRef<NebulaProps>({ nebula });
+  const nebulaRef = useRef<NebulaProps>({ nebula, nebulaPalette });
   useEffect(() => {
-    nebulaRef.current = { nebula };
-  }, [nebula]);
+    nebulaRef.current = { nebula, nebulaPalette };
+    nebulaPaletteRef.current = nebulaPalette;
+  }, [nebula, nebulaPalette]);
 
   // Swap palette immediately without restarting the animation loop
   useEffect(() => {
@@ -170,6 +175,7 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
           nebula: gl.getUniformLocation(nebulaProg, 'u_nebula')!,
           opacity: gl.getUniformLocation(nebulaProg, 'u_opacity')!,
           light: gl.getUniformLocation(nebulaProg, 'u_light')!,
+          palette: gl.getUniformLocation(nebulaProg, 'u_palette')!,
           w0: gl.getUniformLocation(nebulaProg, 'u_w0')!,
           w1: gl.getUniformLocation(nebulaProg, 'u_w1')!,
           w2: gl.getUniformLocation(nebulaProg, 'u_w2')!,
@@ -180,12 +186,19 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
         }
       : null;
 
-    // Randomly assign S II / O III prominence — H-α always wins.
-    // Each page load one of S/O is more prominent than the other.
+    // SHO weights: H-α always dominant, S II / O III randomly ordered.
     const soFlipped = Math.random() < 0.5;
-    const nebulaW0 = soFlipped ? NEBULA_WEIGHT_SO_LO : NEBULA_WEIGHT_SO_HI; // S II
-    const nebulaW1 = NEBULA_WEIGHT_HYDROGEN; // H-α
-    const nebulaW2 = soFlipped ? NEBULA_WEIGHT_SO_HI : NEBULA_WEIGHT_SO_LO; // O III
+    const shoW: [number, number, number] = [
+      soFlipped ? NEBULA_WEIGHT_SO_LO : NEBULA_WEIGHT_SO_HI, // S II
+      NEBULA_WEIGHT_HYDROGEN, // H-α
+      soFlipped ? NEBULA_WEIGHT_SO_HI : NEBULA_WEIGHT_SO_LO, // O III
+    ];
+    // RGB weights: shuffle HI/MID/LO randomly across all three channels.
+    const rgbOrder = [0, 1, 2].sort(() => Math.random() - 0.5);
+    const rgbW: [number, number, number] = [0, 0, 0];
+    rgbW[rgbOrder[0]] = NEBULA_WEIGHT_RGB_HI;
+    rgbW[rgbOrder[1]] = NEBULA_WEIGHT_RGB_MID;
+    rgbW[rgbOrder[2]] = NEBULA_WEIGHT_RGB_LO;
 
     const ptBuf = gl.createBuffer()!;
     const geomBuf = gl.createBuffer()!;
@@ -452,9 +465,11 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula }) => {
           gl.activeTexture(gl.TEXTURE0); // leave TEXTURE0 active for subsequent ops
           gl.uniform1f(nLoc.opacity, isDark ? NEBULA_OPACITY : NEBULA_OPACITY_LIGHT);
           gl.uniform1f(nLoc.light, isDark ? 0.0 : 1.0);
-          gl.uniform1f(nLoc.w0, nebulaW0);
-          gl.uniform1f(nLoc.w1, nebulaW1);
-          gl.uniform1f(nLoc.w2, nebulaW2);
+          const isRGB = nebulaPaletteRef.current === 'rgb';
+          gl.uniform1f(nLoc.palette, isRGB ? 1.0 : 0.0);
+          gl.uniform1f(nLoc.w0, isRGB ? rgbW[0] : shoW[0]);
+          gl.uniform1f(nLoc.w1, isRGB ? rgbW[1] : shoW[1]);
+          gl.uniform1f(nLoc.w2, isRGB ? rgbW[2] : shoW[2]);
           gl.uniform2f(nLoc.uvOffset, uvOffX, uvOffY);
           gl.uniform2f(nLoc.uvScale, uvScaleX, uvScaleY);
 

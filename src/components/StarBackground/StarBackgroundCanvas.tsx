@@ -31,6 +31,9 @@ import {
   NEBULA_WEIGHT_HYDROGEN,
   NEBULA_WEIGHT_SO_HI,
   NEBULA_WEIGHT_SO_LO,
+  NEBULA_WEIGHT_RGB_HI,
+  NEBULA_WEIGHT_RGB_MID,
+  NEBULA_WEIGHT_RGB_LO,
   NEBULA_STAR_ILLUM_RADIUS,
   NEBULA_STAR_ILLUM_STRENGTH,
   NEBULA_ILLUM_BOOST,
@@ -45,18 +48,23 @@ import {
 } from './helpers';
 import type { NebulaProps, Palette, Star, ShootingStar, Explosion } from './types';
 
-export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
+export const StarBackgroundCanvas: React.FC<NebulaProps> = ({
+  nebula,
+  nebulaPalette,
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
   const colorScheme = useComputedColorScheme('dark', { getInitialValueInEffect: true });
   const paletteRef = useRef<Palette>(DARK_PALETTE);
   const colorSchemeRef = useRef(colorScheme);
-  const nebulaRef = useRef<NebulaProps>({ nebula });
+  const nebulaPaletteRef = useRef(nebulaPalette);
+  const nebulaRef = useRef<NebulaProps>({ nebula, nebulaPalette });
 
   // Keep nebula bitmaps accessible inside the RAF loop without restarting it
   useEffect(() => {
-    nebulaRef.current = { nebula };
-  }, [nebula]);
+    nebulaRef.current = { nebula, nebulaPalette };
+    nebulaPaletteRef.current = nebulaPalette;
+  }, [nebula, nebulaPalette]);
 
   // Swap palette immediately without restarting the animation loop
   useEffect(() => {
@@ -111,13 +119,19 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
     stars = makeStars(starCount, starsW, starsH, paletteRef.current.maxStarAlpha);
     window.addEventListener('resize', onResize);
 
-    // Randomise S II / O III prominence once per page load (mirrors WebGL)
+    // SHO weights: H-α always dominant, S II / O III randomly ordered.
     const soFlip = Math.random() < 0.5;
-    const nebulaWeights = [
+    const shoWeights: [number, number, number] = [
       soFlip ? NEBULA_WEIGHT_SO_LO : NEBULA_WEIGHT_SO_HI,
       NEBULA_WEIGHT_HYDROGEN,
       soFlip ? NEBULA_WEIGHT_SO_HI : NEBULA_WEIGHT_SO_LO,
     ];
+    // RGB weights: shuffle HI/MID/LO randomly across all three channels.
+    const rgbOrd = [0, 1, 2].sort(() => Math.random() - 0.5);
+    const rgbNebWeights: [number, number, number] = [0, 0, 0];
+    rgbNebWeights[rgbOrd[0]] = NEBULA_WEIGHT_RGB_HI;
+    rgbNebWeights[rgbOrd[1]] = NEBULA_WEIGHT_RGB_MID;
+    rgbNebWeights[rgbOrd[2]] = NEBULA_WEIGHT_RGB_LO;
 
     // ── Gradient helpers (mirrors nebula.frag.ts) ─────────────────────────────
     const THRESHOLD = 0.1;
@@ -247,6 +261,64 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
       return stops[stops.length - 1][1];
     }
 
+    function rgbR(v: number): [number, number, number] {
+      const stops: [number, [number, number, number]][] = [
+        [0.38, [0.235, 0.02, 0.02]],
+        [0.52, [0.588, 0.078, 0.039]],
+        [0.65, [0.863, 0.255, 0.059]],
+        [0.8, [0.961, 0.471, 0.118]],
+        [1.0, [1, 0.745, 0.235]],
+      ];
+      if (v <= stops[0][0]) return stops[0][1];
+      for (let i = 1; i < stops.length; i++) {
+        if (v <= stops[i][0])
+          return lerpRGB(
+            stops[i - 1][1],
+            stops[i][1],
+            (v - stops[i - 1][0]) / (stops[i][0] - stops[i - 1][0]),
+          );
+      }
+      return stops[stops.length - 1][1];
+    }
+    function rgbG(v: number): [number, number, number] {
+      const stops: [number, [number, number, number]][] = [
+        [0.38, [0.02, 0.137, 0.02]],
+        [0.52, [0.059, 0.392, 0.078]],
+        [0.65, [0.137, 0.706, 0.157]],
+        [0.8, [0.451, 0.902, 0.235]],
+        [1.0, [0.765, 1, 0.392]],
+      ];
+      if (v <= stops[0][0]) return stops[0][1];
+      for (let i = 1; i < stops.length; i++) {
+        if (v <= stops[i][0])
+          return lerpRGB(
+            stops[i - 1][1],
+            stops[i][1],
+            (v - stops[i - 1][0]) / (stops[i][0] - stops[i - 1][0]),
+          );
+      }
+      return stops[stops.length - 1][1];
+    }
+    function rgbB(v: number): [number, number, number] {
+      const stops: [number, [number, number, number]][] = [
+        [0.38, [0.078, 0, 0.235]],
+        [0.52, [0.196, 0.059, 0.608]],
+        [0.65, [0.275, 0.196, 0.863]],
+        [0.8, [0.353, 0.529, 1]],
+        [1.0, [0.471, 0.824, 1]],
+      ];
+      if (v <= stops[0][0]) return stops[0][1];
+      for (let i = 1; i < stops.length; i++) {
+        if (v <= stops[i][0])
+          return lerpRGB(
+            stops[i - 1][1],
+            stops[i][1],
+            (v - stops[i - 1][0]) / (stops[i][0] - stops[i - 1][0]),
+          );
+      }
+      return stops[stops.length - 1][1];
+    }
+
     // Decompose the packed R/G/B noise bitmap into per-pixel RGBA using the
     // colour gradients matching the GLSL shader.  Called once per bitmap/scheme change.
     function decomposeNebula(
@@ -255,6 +327,7 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
       w1: number,
       w2: number,
       dark: boolean,
+      nebPalette: 'sho' | 'rgb',
     ): HTMLCanvasElement {
       const off = document.createElement('canvas');
       off.width = bitmap.width;
@@ -270,9 +343,9 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
         const a0 = nebulaAlpha(v0) * w0;
         const a1 = nebulaAlpha(v1) * w1;
         const a2 = nebulaAlpha(v2) * w2;
-        const col0 = dark ? darkS2(v0) : lightL0(v0);
-        const col1 = dark ? darkHa(v1) : lightL1(v1);
-        const col2 = dark ? darkO3(v2) : lightL2(v2);
+        const col0 = dark ? (nebPalette === 'rgb' ? rgbR(v0) : darkS2(v0)) : lightL0(v0);
+        const col1 = dark ? (nebPalette === 'rgb' ? rgbG(v1) : darkHa(v1)) : lightL1(v1);
+        const col2 = dark ? (nebPalette === 'rgb' ? rgbB(v2) : darkO3(v2)) : lightL2(v2);
         const r = clamp01(col0[0] * a0 + col1[0] * a1 + col2[0] * a2);
         const g = clamp01(col0[1] * a0 + col1[1] * a1 + col2[1] * a2);
         const b = clamp01(col0[2] * a0 + col1[2] * a1 + col2[2] * a2);
@@ -309,14 +382,17 @@ export const StarBackgroundCanvas: React.FC<NebulaProps> = ({ nebula }) => {
       if (NEBULA_ENABLED) {
         const bitmap = nebulaRef.current.nebula;
         if (bitmap) {
-          const kind = isDark ? 'dark' : 'light';
+          const kind = isDark ? `dark-${nebulaPaletteRef.current}` : 'light';
           if (nebulaComposedKind !== kind || !nebulaComposed) {
+            const nebulaW =
+              nebulaPaletteRef.current === 'rgb' ? rgbNebWeights : shoWeights;
             nebulaComposed = decomposeNebula(
               bitmap,
-              nebulaWeights[0],
-              nebulaWeights[1],
-              nebulaWeights[2],
+              nebulaW[0],
+              nebulaW[1],
+              nebulaW[2],
               isDark,
+              nebulaPaletteRef.current,
             );
             nebulaComposedKind = kind;
           }

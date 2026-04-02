@@ -2,8 +2,11 @@ import { useEffect, useState } from 'react';
 
 import { NEBULA_BAKED_COUNT } from './config';
 
+export type NebulaPalette = 'sho' | 'rgb';
+
 interface NebulaState {
   nebula: ImageBitmap | null;
+  palette: NebulaPalette;
 }
 
 // Keyed on `window` so the cache survives client-side navigations (window is
@@ -13,13 +16,13 @@ interface NebulaState {
 declare global {
   interface Window {
     __nebulaVariant?: number;
-    __nebulaBitmap?:  ImageBitmap;
+    __nebulaBitmap?: ImageBitmap;
   }
 }
 
 function getCachedBitmap(): NebulaState {
   const bmp = typeof window !== 'undefined' ? window.__nebulaBitmap : undefined;
-  return { nebula: bmp ?? null };
+  return { nebula: bmp ?? null, palette: Math.random() < 0.5 ? 'sho' : 'rgb' };
 }
 
 /**
@@ -39,7 +42,7 @@ export function useNebulaTexture(enabled: boolean): NebulaState {
 
     // Already loaded this session — reuse and bail.
     if (window.__nebulaBitmap) {
-      setState({ nebula: window.__nebulaBitmap });
+      setState((prev) => ({ ...prev, nebula: window.__nebulaBitmap! }));
       return;
     }
 
@@ -50,20 +53,21 @@ export function useNebulaTexture(enabled: boolean): NebulaState {
     const v = window.__nebulaVariant;
 
     fetch(`/nebula/${v}.png`)
-      .then(r => r.blob())
-      .then(b => createImageBitmap(b))
-      .then(bmp => {
+      .then((r) => r.blob())
+      .then((b) => createImageBitmap(b))
+      .then((bmp) => {
         if (cancelled) return;
         window.__nebulaBitmap = bmp;
-        setState({ nebula: bmp });
+        setState((prev) => ({ ...prev, nebula: bmp }));
       })
-      .catch(err => {
+      .catch((err) => {
         console.error('[useNebulaTexture] Failed to load nebula asset:', err);
       });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [enabled]);
 
   return state;
 }
-

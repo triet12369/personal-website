@@ -1,3 +1,7 @@
+import type { NebulaPalette } from './useNebulaTexture';
+
+export type { NebulaPalette };
+
 export interface Star {
   x: number;
   y: number;
@@ -5,7 +9,7 @@ export interface Star {
   baseAlpha: number;
   alpha: number;
   twinkleSpeed: number;
-  twinklePhase: number;   // current phase in radians (0 when idle)
+  twinklePhase: number; // current phase in radians (0 when idle)
   twinkleActive: boolean; // whether a burst is in progress
   color: [number, number, number]; // RGB 0-255
 }
@@ -44,10 +48,10 @@ export interface Explosion {
 
 /** Canvas 2D palette — colors as CSS rgba() string factories. */
 export interface Palette {
-  starColor:    (alpha: number) => string;
-  shootColor:   (alpha: number) => string;
-  shootTail:    (alpha: number) => string;
-  maxStarAlpha:  number;
+  starColor: (alpha: number) => string;
+  shootColor: (alpha: number) => string;
+  shootTail: (alpha: number) => string;
+  maxStarAlpha: number;
   maxShootAlpha: number;
 }
 
@@ -58,14 +62,15 @@ export interface Palette {
  */
 export interface NebulaProps {
   nebula: ImageBitmap | null;
+  nebulaPalette: NebulaPalette;
 }
 
 /** WebGL palette — colors as normalized [0-1] RGB tuples. */
 export interface RGBPalette {
-  starRGB:       readonly [number, number, number];
+  starRGB: readonly [number, number, number];
   shootColorRGB: readonly [number, number, number];
-  shootTailRGB:  readonly [number, number, number];
-  ringRGB:       readonly [number, number, number];
-  maxStarAlpha:  number;
+  shootTailRGB: readonly [number, number, number];
+  ringRGB: readonly [number, number, number];
+  maxStarAlpha: number;
   maxShootAlpha: number;
 }

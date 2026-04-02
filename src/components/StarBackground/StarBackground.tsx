@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 
 import { StarBackgroundCanvas } from './StarBackgroundCanvas';
-import { StarBackgroundWebGL }  from './StarBackgroundWebGL';
+import { StarBackgroundWebGL } from './StarBackgroundWebGL';
 import { RENDERER } from './config';
 import { useNebulaTexture } from './useNebulaTexture';
 
@@ -21,14 +22,18 @@ function detectWebGL(): boolean {
 
 // ─── Entry point ──────────────────────────────────────────────────────────────
 
-export const StarBackground: React.FC<{ nebulaDisabled?: boolean }> = ({ nebulaDisabled }) => {
+export const StarBackground: React.FC<{ nebulaDisabled?: boolean }> = ({
+  nebulaDisabled,
+}) => {
   // null = not yet determined (SSR / pre-mount)
   const [webgl, setWebgl] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (RENDERER !== 'auto') {
       const using = RENDERER === 'webgl';
-      console.log(`[StarBackground] renderer: ${using ? 'WebGL' : 'Canvas 2D'} (forced by config)`);
+      console.log(
+        `[StarBackground] renderer: ${using ? 'WebGL' : 'Canvas 2D'} (forced by config)`,
+      );
       setWebgl(using);
       return;
     }
@@ -40,11 +45,13 @@ export const StarBackground: React.FC<{ nebulaDisabled?: boolean }> = ({ nebulaD
   // Load nebula texture for both renderers (always, so it is preloaded
   // even on pages where nebula is disabled). Mask the output when disabled so
   // the renderer receives null and skips drawing.
-  const { nebula: nebulaRaw } = useNebulaTexture(webgl !== null);
+  const { nebula: nebulaRaw, palette } = useNebulaTexture(webgl !== null);
   const nebula = nebulaDisabled ? null : nebulaRaw;
 
   if (webgl === null) return null;
-  return webgl
-    ? <StarBackgroundWebGL nebula={nebula} />
-    : <StarBackgroundCanvas nebula={nebula} />;
+  return webgl ? (
+    <StarBackgroundWebGL nebula={nebula} nebulaPalette={palette} />
+  ) : (
+    <StarBackgroundCanvas nebula={nebula} nebulaPalette={palette} />
+  );
 };

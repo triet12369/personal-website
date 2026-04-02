@@ -37,17 +37,21 @@
   left: 0;
   right: 0;
   z-index: 100;
-  --padding: var(--mantine-spacing-lg);
+  --padding: var(--mantine-spacing-sm);
   padding: var(--padding) calc(var(--padding) * 1.5);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: backdrop-filter 300ms ease, background 300ms ease, border-color 300ms ease;
+  transition:
+    backdrop-filter 300ms ease,
+    background 300ms ease,
+    border-color 300ms ease;
 }
 
 .headerScrolled {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   background: color-mix(in srgb, var(--mantine-color-body) 60%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--mantine-color-default-border) 40%, transparent);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--mantine-color-default-border) 40%, transparent);
 }

@@ -13,74 +13,74 @@ export const RENDERER: 'auto' | 'webgl' | 'canvas' = 'auto';
 // ─── Stars ────────────────────────────────────────────────────────────────────
 
 /** Stars per megapixel of canvas area. */
-export const STAR_DENSITY           = 250;
+export const STAR_DENSITY = 250;
 /** Hard cap — prevents excessive star counts on very large/HiDPI screens. */
-export const STAR_COUNT_MAX         = 1800;
-export const STAR_RADIUS_MIN        = 1.5;
-export const STAR_RADIUS_MAX        = 3.5;
+export const STAR_COUNT_MAX = 1800;
+export const STAR_RADIUS_MIN = 1.5;
+export const STAR_RADIUS_MAX = 3.5;
 /** Power applied to the uniform radius sample — >1 biases toward smaller stars. */
-export const STAR_RADIUS_EXPONENT   = 5.5;
+export const STAR_RADIUS_EXPONENT = 5.5;
 /** Glow halo radius as a multiple of the star's core radius. */
-export const STAR_GLOW_FACTOR       = 3;
+export const STAR_GLOW_FACTOR = 3;
 /** Canvas 2D glow scale — applied on top of STAR_GLOW_FACTOR to compensate for
  *  the radial-gradient renderer producing visually larger halos than WebGL sprites. */
 export const STAR_CANVAS_GLOW_SCALE = 0.45;
 /** Bloom sprite size as a multiple of the regular glow sprite. */
-export const STAR_BLOOM_FACTOR      = 1.2;
+export const STAR_BLOOM_FACTOR = 1.2;
 /** Per-star alpha multiplier for the additive bloom pass (0–1). */
-export const STAR_BLOOM_STRENGTH    = 0.09;
+export const STAR_BLOOM_STRENGTH = 0.09;
 /** Phase advance per second (radians). Controls how fast a burst oscillates. */
 export const STAR_TWINKLE_SPEED_MIN = 12;
 export const STAR_TWINKLE_SPEED_MAX = 24;
 /** ±alpha swing during a burst. */
 export const STAR_TWINKLE_AMPLITUDE = 0.2;
 /** Per-second probability that a resting star starts a twinkle burst. */
-export const STAR_TWINKLE_CHANCE    = 0.2;
+export const STAR_TWINKLE_CHANCE = 0.2;
 /** Number of full sine cycles per burst before the star goes back to rest. */
 export const STAR_TWINKLE_BURST_CYCLES = 2;
 
 // ─── Shooting stars ───────────────────────────────────────────────────────────
 
-export const SHOOT_MAX_COUNT            = 4;
-export const SHOOT_SPAWN_INTERVAL       = 1.333; // seconds between spawn attempts
-export const SHOOT_SPAWN_CHANCE         = 0.3;   // probability per attempt
-export const SHOOT_ANGLE_MIN            = 20;    // degrees
-export const SHOOT_ANGLE_MAX            = 40;    // degrees
-export const SHOOT_SPEED_MIN            = 540;   // px/s
-export const SHOOT_SPEED_MAX            = 960;   // px/s
-export const SHOOT_TRAIL_MIN            = 160;
-export const SHOOT_TRAIL_MAX            = 360;
-export const SHOOT_FADE_IN              = 2.4;   // alpha/s
-export const SHOOT_HOLD_DIST_FRAC_MIN   = 0.5;   // fraction of min(w,h) before fade-out (min)
-export const SHOOT_HOLD_DIST_FRAC_MAX   = 1.5;     // fraction of min(w,h) before fade-out (max)
-export const SHOOT_FADE_OUT             = 0.9;   // alpha/s
-export const SHOOT_GLOW_RADIUS          = 3.5;
-export const SHOOT_LINE_WIDTH           = 1.5;
+export const SHOOT_MAX_COUNT = 4;
+export const SHOOT_SPAWN_INTERVAL = 1.333; // seconds between spawn attempts
+export const SHOOT_SPAWN_CHANCE = 0.3; // probability per attempt
+export const SHOOT_ANGLE_MIN = 20; // degrees
+export const SHOOT_ANGLE_MAX = 40; // degrees
+export const SHOOT_SPEED_MIN = 540; // px/s
+export const SHOOT_SPEED_MAX = 960; // px/s
+export const SHOOT_TRAIL_MIN = 160;
+export const SHOOT_TRAIL_MAX = 360;
+export const SHOOT_FADE_IN = 2.4; // alpha/s
+export const SHOOT_HOLD_DIST_FRAC_MIN = 0.5; // fraction of min(w,h) before fade-out (min)
+export const SHOOT_HOLD_DIST_FRAC_MAX = 1.5; // fraction of min(w,h) before fade-out (max)
+export const SHOOT_FADE_OUT = 0.9; // alpha/s
+export const SHOOT_GLOW_RADIUS = 3.5;
+export const SHOOT_LINE_WIDTH = 1.5;
 
 // ─── Explosions ───────────────────────────────────────────────────────────────
 
-export const EXPLOSION_PARTICLE_COUNT   = 32;
-export const EXPLOSION_SPEED_MIN        = 24;    // px/s
-export const EXPLOSION_SPEED_MAX        = 330;   // px/s
-export const EXPLOSION_ALPHA_MIN        = 0.55;
-export const EXPLOSION_ALPHA_MAX        = 1.0;
-export const EXPLOSION_DECAY_MIN        = 0.66;  // alpha/s
-export const EXPLOSION_DECAY_MAX        = 1.56;  // alpha/s
-export const EXPLOSION_RADIUS_MIN       = 0.4;
-export const EXPLOSION_RADIUS_MAX       = 2.4;
-export const EXPLOSION_RING_INIT_ALPHA  = 0.75;
-export const EXPLOSION_RING_EXPAND      = 210;   // px/s
-export const EXPLOSION_RING_FADE        = 1.92;  // alpha/s
-export const EXPLOSION_PARTICLE_DRAG    = 0.1576; // velocity multiplier per second (0.97^60)
-export const EXPLOSION_PARTICLE_GRAVITY = 108;   // px/s²
+export const EXPLOSION_PARTICLE_COUNT = 32;
+export const EXPLOSION_SPEED_MIN = 24; // px/s
+export const EXPLOSION_SPEED_MAX = 330; // px/s
+export const EXPLOSION_ALPHA_MIN = 0.55;
+export const EXPLOSION_ALPHA_MAX = 1.0;
+export const EXPLOSION_DECAY_MIN = 0.66; // alpha/s
+export const EXPLOSION_DECAY_MAX = 1.56; // alpha/s
+export const EXPLOSION_RADIUS_MIN = 0.4;
+export const EXPLOSION_RADIUS_MAX = 2.4;
+export const EXPLOSION_RING_INIT_ALPHA = 0.75;
+export const EXPLOSION_RING_EXPAND = 210; // px/s
+export const EXPLOSION_RING_FADE = 1.92; // alpha/s
+export const EXPLOSION_PARTICLE_DRAG = 0.1576; // velocity multiplier per second (0.97^60)
+export const EXPLOSION_PARTICLE_GRAVITY = 108; // px/s²
 
 // ─── Nebula (WebGL only) ──────────────────────────────────────────────────────
 
 /** Master toggle — set to false to skip all nebula work. */
-export const NEBULA_ENABLED     = true;
+export const NEBULA_ENABLED = true;
 
 /** Overall nebula layer opacity for dark mode (0–1). */
-export const NEBULA_OPACITY       = 0.6;
+export const NEBULA_OPACITY = 0.6;
 
 /** Overall nebula layer opacity for light mode (0–1). */
 export const NEBULA_OPACITY_LIGHT = 0.45;
@@ -94,9 +94,18 @@ export const NEBULA_OPACITY_LIGHT = 0.45;
  *
  * Range 0–1. Multiply each layer's texel alpha before blending.
  */
-export const NEBULA_WEIGHT_HYDROGEN = 1.00;  // H-α  — most prominent
-export const NEBULA_WEIGHT_SO_HI    = 0.85;  // whichever of S II / O III wins the coin flip
-export const NEBULA_WEIGHT_SO_LO    = 0.65;  // the other one
+export const NEBULA_WEIGHT_HYDROGEN = 1.0; // H-α  — most prominent
+export const NEBULA_WEIGHT_SO_HI = 0.85; // whichever of S II / O III wins the coin flip
+export const NEBULA_WEIGHT_SO_LO = 0.65; // the other one
+
+/**
+ * RGB palette channel weights — one channel is randomly dominant each page load.
+ * All three weights are shuffled across channels (R/G/B), so no channel is
+ * always dominant the way H-α is in SHO.
+ */
+export const NEBULA_WEIGHT_RGB_HI = 1.0; // dominant channel
+export const NEBULA_WEIGHT_RGB_MID = 0.7; // secondary channel
+export const NEBULA_WEIGHT_RGB_LO = 0.5; // tertiary channel
 
 /**
  * Number of variants pre-generated by scripts/generate-nebula.mjs.
@@ -108,10 +117,10 @@ export const NEBULA_BAKED_COUNT = 12;
 
 /** Radius of each star's illumination halo as a multiple of its bloom sprite size.
  *  Larger values spread light further, making cluster compounding more visible. */
-export const NEBULA_STAR_ILLUM_RADIUS   = 24.0;
+export const NEBULA_STAR_ILLUM_RADIUS = 24.0;
 /** Peak per-star contribution written into the illumination accumulation FBO (0–1).
  *  Keep low — halos compound additively so clusters naturally build up. */
 export const NEBULA_STAR_ILLUM_STRENGTH = 0.04;
 /** Shader multiplier applied to the accumulated illumination texture.
  *  Controls how strongly clustered stars brighten the nebula behind them. */
-export const NEBULA_ILLUM_BOOST         = 3.0;
+export const NEBULA_ILLUM_BOOST = 3.0;

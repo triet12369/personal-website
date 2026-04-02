@@ -7,12 +7,13 @@
  *   B = O III / layer 2 — raw fBm noise value [0, 1]
  *   A = 1.0   (always opaque; per-pixel alpha is computed from noise here)
  */
-const src = /* glsl */`
+const src = /* glsl */ `
 precision mediump float;
 
 uniform sampler2D u_nebula;      // packed noise: R=S II, G=H-α, B=O III
 uniform float     u_opacity;     // global opacity scale
-uniform float     u_light;       // 0.0 = dark (SHO), 1.0 = light (pantone)
+uniform float     u_light;       // 0.0 = dark (SHO/RGB), 1.0 = light (pantone)
+uniform float     u_palette;     // 0.0 = SHO (dark only), 1.0 = RGB (dark only)
 uniform float     u_w0;          // S II / layer-0 prominence weight
 uniform float     u_w1;          // H-α / layer-1 prominence weight
 uniform float     u_w2;          // O III / layer-2 prominence weight
@@ -73,6 +74,49 @@ vec3 darkO3(float v) {
   else               return mix(c3, c4, clamp((v - 0.80) / 0.20, 0.0, 1.0));
 }
 
+// ── Dark palette — RGB full spectrum ──────────────────────────────────────────
+// R channel: warm end (deep crimson → red → orange → amber → golden)
+vec3 rgbR(float v) {
+  // 0.38→[60,5,5]  0.52→[150,20,10]  0.65→[220,65,15]  0.80→[245,120,30]  1.00→[255,190,60]
+  vec3 c0 = vec3(0.235, 0.020, 0.020);
+  vec3 c1 = vec3(0.588, 0.078, 0.039);
+  vec3 c2 = vec3(0.863, 0.255, 0.059);
+  vec3 c3 = vec3(0.961, 0.471, 0.118);
+  vec3 c4 = vec3(1.000, 0.745, 0.235);
+  if      (v < 0.52) return mix(c0, c1, clamp((v - 0.38) / 0.14, 0.0, 1.0));
+  else if (v < 0.65) return mix(c1, c2, (v - 0.52) / 0.13);
+  else if (v < 0.80) return mix(c2, c3, (v - 0.65) / 0.15);
+  else               return mix(c3, c4, clamp((v - 0.80) / 0.20, 0.0, 1.0));
+}
+
+// G channel: middle spectrum (dark forest → vivid green → lime → chartreuse)
+vec3 rgbG(float v) {
+  // 0.38→[5,35,5]  0.52→[15,100,20]  0.65→[35,180,40]  0.80→[115,230,60]  1.00→[195,255,100]
+  vec3 c0 = vec3(0.020, 0.137, 0.020);
+  vec3 c1 = vec3(0.059, 0.392, 0.078);
+  vec3 c2 = vec3(0.137, 0.706, 0.157);
+  vec3 c3 = vec3(0.451, 0.902, 0.235);
+  vec3 c4 = vec3(0.765, 1.000, 0.392);
+  if      (v < 0.52) return mix(c0, c1, clamp((v - 0.38) / 0.14, 0.0, 1.0));
+  else if (v < 0.65) return mix(c1, c2, (v - 0.52) / 0.13);
+  else if (v < 0.80) return mix(c2, c3, (v - 0.65) / 0.15);
+  else               return mix(c3, c4, clamp((v - 0.80) / 0.20, 0.0, 1.0));
+}
+
+// B channel: cool end (deep violet → indigo → electric blue → ice cyan)
+vec3 rgbB(float v) {
+  // 0.38→[20,0,60]  0.52→[50,15,155]  0.65→[70,50,220]  0.80→[90,135,255]  1.00→[120,210,255]
+  vec3 c0 = vec3(0.078, 0.000, 0.235);
+  vec3 c1 = vec3(0.196, 0.059, 0.608);
+  vec3 c2 = vec3(0.275, 0.196, 0.863);
+  vec3 c3 = vec3(0.353, 0.529, 1.000);
+  vec3 c4 = vec3(0.471, 0.824, 1.000);
+  if      (v < 0.52) return mix(c0, c1, clamp((v - 0.38) / 0.14, 0.0, 1.0));
+  else if (v < 0.65) return mix(c1, c2, (v - 0.52) / 0.13);
+  else if (v < 0.80) return mix(c2, c3, (v - 0.65) / 0.15);
+  else               return mix(c3, c4, clamp((v - 0.80) / 0.20, 0.0, 1.0));
+}
+
 // ── Light palette — pantone scale ─────────────────────────────────────────────
 
 vec3 lightL0(float v) {
@@ -114,9 +158,9 @@ void main() {
   float a2 = nebulaAlpha(v2) * u_w2;
 
   // Colour from the appropriate palette
-  vec3 col0 = u_light > 0.5 ? lightL0(v0) : darkS2(v0);
-  vec3 col1 = u_light > 0.5 ? lightL1(v1) : darkHa(v1);
-  vec3 col2 = u_light > 0.5 ? lightL2(v2) : darkO3(v2);
+  vec3 col0 = u_light > 0.5 ? lightL0(v0) : (u_palette > 0.5 ? rgbR(v0) : darkS2(v0));
+  vec3 col1 = u_light > 0.5 ? lightL1(v1) : (u_palette > 0.5 ? rgbG(v1) : darkHa(v1));
+  vec3 col2 = u_light > 0.5 ? lightL2(v2) : (u_palette > 0.5 ? rgbB(v2) : darkO3(v2));
 
   // Cross-layer scattering: Hα bleeds a little colour into adjacent emission bands.
   // Real nebulae have overlapping ionisation zones rather than pure independent layers.
