@@ -8,7 +8,7 @@ export const DEBUG_FRAMETIME = false;
  * 'webgl'  — always use WebGL (no fallback)
  * 'canvas' — always use Canvas 2D
  */
-export const RENDERER: 'auto' | 'webgl' | 'canvas' = 'auto';
+export const RENDERER: 'auto' | 'webgl' | 'canvas' = 'webgl';
 
 // ─── Stars ────────────────────────────────────────────────────────────────────
 
@@ -124,3 +124,21 @@ export const NEBULA_STAR_ILLUM_STRENGTH = 0.04;
 /** Shader multiplier applied to the accumulated illumination texture.
  *  Controls how strongly clustered stars brighten the nebula behind them. */
 export const NEBULA_ILLUM_BOOST = 3.0;
+
+// ─── Nebula animation ─────────────────────────────────────────────────────────
+
+/** Maximum UV displacement for the drift animation (0–1 texture-space units).
+ *  Sinusoidal oscillation — the nebula never scrolls past this distance from center. */
+export const NEBULA_DRIFT_AMPLITUDE = 0.03;
+
+/** Drift oscillation speed in radians per second. Full cycle ≈ 2π/speed seconds.
+ *  0.10 rad/s → ~63 s per full cycle. */
+export const NEBULA_DRIFT_SPEED = 0.1;
+
+/** Pulse opacity swing as a fraction of the base opacity (0–1).
+ *  0.10 → ±10% opacity swing around the base value. */
+export const NEBULA_PULSE_AMPLITUDE = 0.2;
+
+/** Pulse oscillation speed in radians per second.
+ *  0.07 rad/s → ~90 s per full cycle. */
+export const NEBULA_PULSE_SPEED = 0.5;

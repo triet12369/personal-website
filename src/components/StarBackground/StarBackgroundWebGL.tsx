@@ -37,6 +37,10 @@ import {
   NEBULA_STAR_ILLUM_RADIUS,
   NEBULA_STAR_ILLUM_STRENGTH,
   NEBULA_ILLUM_BOOST,
+  NEBULA_DRIFT_AMPLITUDE,
+  NEBULA_DRIFT_SPEED,
+  NEBULA_PULSE_AMPLITUDE,
+  NEBULA_PULSE_SPEED,
 } from './config';
 import { DARK_RGB_PALETTE, LIGHT_RGB_PALETTE } from './palettes';
 import {
@@ -199,6 +203,11 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula, nebulaPalet
     rgbW[rgbOrder[0]] = NEBULA_WEIGHT_RGB_HI;
     rgbW[rgbOrder[1]] = NEBULA_WEIGHT_RGB_MID;
     rgbW[rgbOrder[2]] = NEBULA_WEIGHT_RGB_LO;
+
+    // Animation state — accumulated elapsed time and random initial phases.
+    let elapsed = 0;
+    const driftPhaseX = Math.random() * Math.PI * 2;
+    const driftPhaseY = driftPhaseX + 1.3; // offset by ~1.3 rad → elliptical drift path
 
     const ptBuf = gl.createBuffer()!;
     const geomBuf = gl.createBuffer()!;
@@ -463,14 +472,21 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula, nebulaPalet
           gl.uniform1i(nLoc.starLight, 1);
           gl.uniform1f(nLoc.illumBoost, NEBULA_ILLUM_BOOST);
           gl.activeTexture(gl.TEXTURE0); // leave TEXTURE0 active for subsequent ops
-          gl.uniform1f(nLoc.opacity, isDark ? NEBULA_OPACITY : NEBULA_OPACITY_LIGHT);
+          const driftX =
+            NEBULA_DRIFT_AMPLITUDE * Math.sin(NEBULA_DRIFT_SPEED * elapsed + driftPhaseX);
+          const driftY =
+            NEBULA_DRIFT_AMPLITUDE * Math.sin(NEBULA_DRIFT_SPEED * elapsed + driftPhaseY);
+          const pulseScale =
+            1 + NEBULA_PULSE_AMPLITUDE * Math.sin(NEBULA_PULSE_SPEED * elapsed);
+          const baseOpacity = isDark ? NEBULA_OPACITY : NEBULA_OPACITY_LIGHT;
+          gl.uniform1f(nLoc.opacity, baseOpacity * pulseScale);
           gl.uniform1f(nLoc.light, isDark ? 0.0 : 1.0);
           const isRGB = nebulaPaletteRef.current === 'rgb';
           gl.uniform1f(nLoc.palette, isRGB ? 1.0 : 0.0);
           gl.uniform1f(nLoc.w0, isRGB ? rgbW[0] : shoW[0]);
           gl.uniform1f(nLoc.w1, isRGB ? rgbW[1] : shoW[1]);
           gl.uniform1f(nLoc.w2, isRGB ? rgbW[2] : shoW[2]);
-          gl.uniform2f(nLoc.uvOffset, uvOffX, uvOffY);
+          gl.uniform2f(nLoc.uvOffset, uvOffX + driftX, uvOffY + driftY);
           gl.uniform2f(nLoc.uvScale, uvScaleX, uvScaleY);
 
           gl.bindBuffer(gl.ARRAY_BUFFER, nebulaQuadBuf);
@@ -488,6 +504,7 @@ export const StarBackgroundWebGL: React.FC<NebulaProps> = ({ nebula, nebulaPalet
 
       // ── Stars ────────────────────────────────────────────────────────────
       const dt = Math.min(wallDelta, 100) / 1000;
+      elapsed += dt;
       let sn = 0;
       for (const s of stars) {
         if (s.twinkleActive) {
