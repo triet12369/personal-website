@@ -1,4 +1,4 @@
-@use '../../styles/mixins' as *;
+@use "../../styles/mixins" as *;
 
 .timeline {
   list-style: none;
@@ -17,7 +17,7 @@
   position: relative;
   cursor: pointer;
 
-  @mixin smaller-than ($mantine-breakpoint-sm) {
+  @mixin smaller-than($mantine-breakpoint-sm) {
     grid-template-columns: 1fr;
     gap: 0.25rem;
   }
@@ -25,7 +25,7 @@
 
 .date {
   font-size: 0.72rem;
-  font-family: 'Raleway', sans-serif;
+  font-family: "Raleway", sans-serif;
   font-weight: 500;
   opacity: 0.8;
   padding-top: 0.25rem;
@@ -48,7 +48,7 @@
 }
 
 .title {
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: "Cormorant Garamond", Georgia, serif;
   font-size: 1.25rem;
   font-weight: 600;
   letter-spacing: 0.015em;
@@ -57,7 +57,7 @@
   transition: opacity 250ms ease;
 
   &::after {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
   }
@@ -69,7 +69,7 @@
 
 .description {
   margin: 0;
-  font-family: 'Raleway', sans-serif;
+  font-family: "Raleway", sans-serif;
   font-size: 0.85rem;
   font-weight: 400;
   opacity: 0.9;
@@ -93,7 +93,7 @@
 .empty {
   opacity: 0.65;
   font-style: italic;
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: "Cormorant Garamond", Georgia, serif;
 }
 
 .imageWrapper {
@@ -110,7 +110,9 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform 600ms ease, opacity 600ms ease;
+  transition:
+    transform 600ms ease,
+    opacity 600ms ease;
 
   &:hover {
     transform: scale(1.03);
